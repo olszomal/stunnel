@@ -160,7 +160,7 @@ execute_program() {
   result=0
   if [ ! -s "error.log" ]
     then
-      nc 127.0.0.1 "$http1" -vv > "temp.log" 2>>"stderr.log" &
+      sleep 10 | nc 127.0.0.1 "$http1" -vv > "temp.log" 2>>"stderr.log" &
       killing_stunnel
       if grep -q "test $1.*success" "temp.log"
         then
