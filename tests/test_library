@@ -47,8 +47,8 @@ waiting_for(){
   pid_children=$(ps -o pid,ppid | \
     awk -v ppid1="${pid_tail}" -v ppid2="${pid_timeout}" \
       '{if ($2==ppid1 || $2==ppid2) print $1}')
-  kill ${pid_tail} ${pid_timeout} ${pid_children}
-  wait ${pid_tail} ${pid_timeout}
+  kill ${pid_tail} ${pid_timeout} ${pid_children} 2>> "stderr_nc.log"
+  wait ${pid_tail} ${pid_timeout} 2>> "stderr_nc.log"
   rm -f "fifo"
 }
 
@@ -66,7 +66,7 @@ connecting_ncat(){
       cat "stderr_nc.log" >> "stderr.log"
       rm -f "stderr_nc.log"
       printf "\n%s\n" "test $1" > "stderr_nc.log"
-      nc -l -p "$http2" -vvv > "temp.log" 2>> "stderr_nc.log" &
+      { nc -l -p "$http2" -vvv >"temp.log" 2>> "stderr_nc.log" <&3 3<&- & } 3<&0
       pid_nc=$!
       waiting_for "stderr_nc" "Listening" "listening" "QUITTING"
       if grep -q "istening" "stderr_nc.log"
@@ -80,7 +80,7 @@ connecting_ncat(){
     then
       waiting_for "stderr_nc" "Closing" "Connection reset by peer" "UNUSED PATTERN"
     else
-      waiting_for "stderr_nc" "succeeded" "from localhost" "Connection reset by peer"
+      waiting_for "stderr_nc" "accepted" "from localhost" "Connection reset by peer"
   fi
   kill -TERM ${pid_ncat} ${pid_nc} 2>> "stderr_nc.log"
   cat "stderr_nc.log" >> "stderr.log"
@@ -94,11 +94,9 @@ killing_stunnel() {
 }
 
 reload_stunnel() {
-  while [ ! -e "stunnel.pid" ]
-    do
-      sleep 1
-    done
+  waiting_for "stunnel" "stunnel.pid" "UNUSED PATTERN" "UNUSED PATTERN" "UNUSED PATTERN"
   kill -HUP $(tail "stunnel.pid") 2>> "stderr_nc.log"
+  waiting_for "stunnel" "127.0.0.1:${http1}" "UNUSED PATTERN" "UNUSED PATTERN" "UNUSED PATTERN"
   return 0
 }
 
