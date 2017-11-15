@@ -56,7 +56,7 @@ connecting_ncat(){
   result=0
   rm -f "stderr_nc.log"
   printf "\n%s\n" "test $1" > "stderr_nc.log"
-  ncat -l -p "$http2" -vvv > "temp.log" 2>> "stderr_nc.log" &
+  { ncat -l -p "$http2" -vvv >"temp.log" 2>> "stderr_nc.log" <&3 3<&- & } 3<&0
   pid_ncat=$!
   waiting_for "stderr_nc" "Listening" "QUITTING" "ncat\: not found" "UNUSED PATTERN"
   if grep -q "Listening" "stderr_nc.log"
