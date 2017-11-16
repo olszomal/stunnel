@@ -78,6 +78,7 @@ connecting_ncat(){
   fi
   kill -TERM ${pid_nc} 2>> "stderr_nc.log"
   cat "stderr_nc.log" >> "stderr.log"
+  echo "somedata" >"nodata"
   rm -f "nodata"
   return $result
 }
@@ -156,7 +157,10 @@ execute_program() {
   if [ ! -s "error.log" ]
     then
       cat "nodata" | "$2" 127.0.0.1 "$http1" -vv > "temp.log" 2>>"stderr.log" &
+      pid_nc=$!
       killing_stunnel
+      kill -TERM ${pid_nc} 2>> "stderr.log"
+      echo "somedata" >"nodata"
       rm -f "nodata"
       if grep -q "test $1.*success" "temp.log"
         then
