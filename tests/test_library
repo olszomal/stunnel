@@ -57,11 +57,16 @@ connecting_ncat(){
   rm -f "stderr_nc.log"
   printf "\n%s\n" "test $1" > "stderr_nc.log"
   sleep 10 | "$3" -l -p "$http2" -vvv >"temp.log" 2>> "stderr_nc.log" &
-  pid_ncat=$!
+  pid_nc=$!
   waiting_for "stderr_nc" "Listening" "listening" "QUITTING"
   if grep -q "istening" "stderr_nc.log"
     then # Listening or listening
-      printf "%-35s\t%s\n" "test $1" "$2" | "$3" 127.0.0.1 "$http1" -vv 2>> "stderr_nc.log" &
+      if [ "$3" = "ncat" ]
+        then
+          printf "%-35s\t%s\n" "test $1" "$2" | "$3" 127.0.0.1 "$http1" -vv 2>> "stderr_nc.log"
+        else
+          printf "%-35s\t%s\n" "test $1" "$2" | "$3" 127.0.0.1 "$http1" -vv 2>> "stderr_nc.log" &
+        fi 
     else # ncat (nc) failed
       result=1
     fi
@@ -71,7 +76,7 @@ connecting_ncat(){
     else
       waiting_for "stderr_nc" "accepted" "from localhost" "Connection reset by peer"
   fi
-  kill -TERM ${pid_ncat} ${pid_nc} 2>> "stderr_nc.log"
+  kill -TERM ${pid_nc} 2>> "stderr_nc.log"
   cat "stderr_nc.log" >> "stderr.log"
   return $result
 }

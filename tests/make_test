@@ -29,73 +29,32 @@ if [ mynetcat != "null" ] # netcat is required
     date > "results.log"
     ../../src/stunnel -version 2>> "results.log"
     printf "\n%s\n" "Testing..." >> "results.log"
-        head -n5 "results.log"
-        for plik in ${script_path}/recipes/*
-          do
-            /bin/sh $plik $mynetcat
-            state=$?
-            if [ "$state" -eq 0 ]
-              then
-                count=$((count + 1))
-              elif [ "$state" -eq 125 ]
-                then
-                  skip=$((skip + 1))
-              else # $state -eq 1
-                fail=$((fail + 1))
-                result=1
-              fi
-          done
-        if [ $count -eq 0 ]
-          then # no test was done
+    head -n5 "results.log"
+    for plik in ${script_path}/recipes/*
+      do
+        /bin/sh $plik $mynetcat
+        state=$?
+        if [ "$state" -eq 0 ]
+          then
+            count=$((count + 1))
+          elif [ "$state" -eq 125 ]
+            then
+              skip=$((skip + 1))
+          else # $state -eq 1
+            fail=$((fail + 1))
             result=1
           fi
-        printf "%s\n" "summary: success $count, skip $skip, fail $fail"
-        printf "%s\n" "summary: success $count, skip $skip, fail $fail" >> "results.log"
-        printf "%s\n" "./make_test finished"
+      done
+    if [ $count -eq 0 ]
+      then # no test was done
+        result=1
+      fi
+    printf "%s\n" "summary: success $count, skip $skip, fail $fail"
+    printf "%s\n" "summary: success $count, skip $skip, fail $fail" >> "results.log"
+    printf "%s\n" "./make_test finished"
     cd ..
   else # netcat not found
     printf "%s\n" "./make_test skipped: ncat (nc) not found in \$PATH"
     #result=125
-  fi
-exit $result
-    cd "${result_path}"
-    date > "results.log"
-    ../../src/stunnel -version 2>> "results.log"
-    printf "\n%s\n" "Testing..." >> "results.log"
-    if ! grep -q "apple" "results.log"
-      then
-        head -n5 "results.log"
-        for plik in ${script_path}/recipes/*
-          do
-            /bin/sh $plik
-            state=$?
-            if [ "$state" -eq 0 ]
-              then
-                count=$((count + 1))
-              elif [ "$state" -eq 125 ]
-                then
-                  skip=$((skip + 1))
-              else # $state -eq 1
-                fail=$((fail + 1))
-                result=1
-              fi
-          done
-        if [ $count -eq 0 ]
-          then # no test was done
-            result=1
-          fi
-        printf "%s\n" "summary: success $count, skip $skip, fail $fail"
-        printf "%s\n" "summary: success $count, skip $skip, fail $fail" >> "results.log"
-        printf "%s\n" "./make_test finished"
-      else # macOS
-        head -n2 "results.log" | tail -1
-        printf "%s\n" "./make_test error: platform not supported"
-        printf "%s\n" "./make_test error: platform not supported" >> "results.log"
-        result=125
-      fi
-    cd ..
-  else # ncat was not found
-    printf "%s\n" "./make_test error: ncat (nc) not found in \$PATH"
-    result=125
   fi
 exit $result
