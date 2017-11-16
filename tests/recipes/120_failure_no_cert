@@ -25,5 +25,5 @@ EOT
 
 check_ports "120_failure_no_cert"
 start 2> "error.log"
-test_log_for "120_failure_no_cert" "failure" 2>> "stderr.log"
+test_log_for "120_failure_no_cert" "failure" "$1" 2>> "stderr.log"
 exit $?

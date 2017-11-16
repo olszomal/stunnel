@@ -25,7 +25,7 @@ check_ports "015_p12_cert"
 if grep -q "OpenSSL 1" "results.log"
   then
     start 2> "error.log"
-    test_log_for "015_p12_cert" "success" 2>> "stderr.log"
+    test_log_for "015_p12_cert" "success" "$1" 2>> "stderr.log"
     exit $?
   else
     screen_result "015_p12_cert" "skipped"

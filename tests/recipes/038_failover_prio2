@@ -29,5 +29,5 @@ EOT
 }
 
 check_ports "038_failover_prio2"
-test_log_for "038_failover_prio2" "prio" 2>> "stderr.log"
+test_log_for "038_failover_prio2" "prio" "$1" 2>> "stderr.log"
 exit $?

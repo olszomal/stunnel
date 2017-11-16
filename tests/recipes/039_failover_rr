@@ -35,5 +35,5 @@ EOT
 }
 
 check_ports "039_failover_rr"
-test_log_for "039_failover_rr" "rr" 2>> "stderr.log"
+test_log_for "039_failover_rr" "rr" "$1" 2>> "stderr.log"
 exit $?

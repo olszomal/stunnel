@@ -26,5 +26,5 @@ EOT
 
 check_ports "113_failure_CRL_file"
 start 2> "error.log"
-test_log_for "113_failure_CRL_file" "failure" 2>> "stderr.log"
+test_log_for "113_failure_CRL_file" "failure" "$1" 2>> "stderr.log"
 exit $?

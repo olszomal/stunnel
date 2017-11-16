@@ -41,5 +41,5 @@ echo "
   cert = ${script_path}/certs/server_cert.pem" > "stunnel.conf"
 
 reload_stunnel
-test_log_for "040_reload" "success" 2>> "stderr.log"
+test_log_for "040_reload" "success" "$1" 2>> "stderr.log"
 exit $?

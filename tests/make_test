@@ -11,23 +11,17 @@ script_path=$(pwd)
 cd "${result_path}"
 result_path="${result_path}/logs"
 
-if [ -n "$(command -v ncat)" ] || [ -n "$(command -v nc)" ]
-  then
-    rm -rf "${result_path}"
-    mkdir "${result_path}"#!/bin/sh
+if [ -n "$(command -v ncat)" ]
+  then # ncat
+    mynetcat="ncat"
+  elif [ -n "$(command -v nc)" ]
+    then # nc
+      mynetcat="nc"
+  else
+    mynetcat="null"
+  fi
 
-result=0
-count=0
-fail=0
-skip=0
-
-result_path=$(pwd)
-cd $(dirname "$0")
-script_path=$(pwd)
-cd "${result_path}"
-result_path="${result_path}/logs"
-
-if [ -n "$(command -v ncat)" ] || [ -n "$(command -v nc)" ] # netcat is required
+if [ mynetcat != "null" ] # netcat is required
   then
     rm -rf "${result_path}"
     mkdir "${result_path}"
@@ -35,12 +29,10 @@ if [ -n "$(command -v ncat)" ] || [ -n "$(command -v nc)" ] # netcat is required
     date > "results.log"
     ../../src/stunnel -version 2>> "results.log"
     printf "\n%s\n" "Testing..." >> "results.log"
-#    if ! grep -q "apple" "results.log"
-#      then
         head -n5 "results.log"
         for plik in ${script_path}/recipes/*
           do
-            /bin/sh $plik
+            /bin/sh $plik $mynetcat
             state=$?
             if [ "$state" -eq 0 ]
               then
@@ -60,12 +52,6 @@ if [ -n "$(command -v ncat)" ] || [ -n "$(command -v nc)" ] # netcat is required
         printf "%s\n" "summary: success $count, skip $skip, fail $fail"
         printf "%s\n" "summary: success $count, skip $skip, fail $fail" >> "results.log"
         printf "%s\n" "./make_test finished"
-#      else # macOS
-#        head -n2 "results.log" | tail -1
-#        printf "%s\n" "./make_test skipped: platform not supported"
-#        printf "%s\n" "./make_test skipped: platform not supported" >> "results.log"
-#        #result=125
-#      fi
     cd ..
   else # netcat not found
     printf "%s\n" "./make_test skipped: ncat (nc) not found in \$PATH"
