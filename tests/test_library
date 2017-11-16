@@ -56,9 +56,7 @@ connecting_ncat(){
   result=0
   rm -f "stderr_nc.log"
   printf "\n%s\n" "test $1" > "stderr_nc.log"
-  mkfifo "nodata"
   sleep 10 | "$3" -l -p "$http2" -vvv >"temp.log" 2>> "stderr_nc.log" &
-  rm "nodata"
   pid_ncat=$!
   waiting_for "stderr_nc" "Listening" "listening" "QUITTING"
   if grep -q "istening" "stderr_nc.log"
@@ -150,9 +148,7 @@ execute_program() {
   result=0
   if [ ! -s "error.log" ]
     then
-      mkfifo "nodata"
-      cat "nodata" | "$2" 127.0.0.1 "$http1" -vv > "temp.log" 2>>"stderr.log" &
-      rm "nodata"
+      sleep 10 | "$2" 127.0.0.1 "$http1" -vv > "temp.log" 2>>"stderr.log" &
       killing_stunnel
       if grep -q "test $1.*success" "temp.log"
         then
