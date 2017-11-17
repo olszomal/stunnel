@@ -84,7 +84,7 @@ connecting_ncat(){
 }
 
 killing_stunnel() {
-  waiting_for "stunnel" "Service .* finished" "UNUSED PATTERN" "UNUSED PATTERN" "UNUSED PATTERN"
+  waiting_for "stunnel" "Service .* finished" "Child process .* finished" "child started" "UNUSED PATTERN"
   kill -TERM $(tail "stunnel.pid") 2>> "stderr.log"
   return 0
 }
@@ -160,7 +160,7 @@ execute_program() {
       pid_nc=$!
       killing_stunnel
       kill -TERM ${pid_nc} 2>> "stderr.log"
-      echo "somedata" >"nodata"
+      echo "somedata" >"nodata" 2>> "stderr.log"
       rm -f "nodata"
       if grep -q "test $1.*success" "temp.log"
         then
