@@ -10,20 +10,21 @@ start() {
 
   [https client]
   client = yes
-  accept = 127.0.0.1:${http1}
+  exec = ${script_path}/execute_read
+  execArgs = execute_read ${result_path}/temp.log
   connect = 127.0.0.1:${https}
-  verifyChain = yes
-  CAfile = ${script_path}/certs/CACert.pem
-  CRLfile = ${script_path}/certs/CACertCRL.pem
+  delay = yes
+  retry = yes
 
-  [https server]
+  [https server_1]
   accept = 127.0.0.1:${https}
-  connect = 127.0.0.1:${http2}
+  exec = ${script_path}/execute
+  execArgs = execute 043_session_delay
   cert = ${script_path}/certs/server_cert.pem
 EOT
 }
 
-check_ports "013_CRL_file"
+check_ports "043_session_delay"
 start 2> "error.log"
-test_log_for "013_CRL_file" "success" "$1" 2>> "stderr.log"
+test_log_for "043_session_delay" "session" "$1" "1" 2>> "stderr.log"
 exit $?
