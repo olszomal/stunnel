@@ -206,7 +206,7 @@
 /* #undef HAVE___MAKECONTEXT_V2 */
 
 /* Host description */
-#define HOST "x86_64-pc-linux-gnu"
+#define HOST "x86_64-unknown-linux-gnu"
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
@@ -221,7 +221,7 @@
 #define PACKAGE_NAME "stunnel"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "stunnel 5.43"
+#define PACKAGE_STRING "stunnel 5.45"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "stunnel"
@@ -230,7 +230,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "5.43"
+#define PACKAGE_VERSION "5.45"
 
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
@@ -267,7 +267,7 @@
 /* #undef USE_UCONTEXT */
 
 /* Version number of package */
-#define VERSION "5.43"
+#define VERSION "5.45"
 
 /* Use Darwin source */
 /* #undef _DARWIN_C_SOURCE */

@@ -1,6 +1,6 @@
 /*
  *   stunnel       TLS offloading and load-balancing proxy
- *   Copyright (C) 1998-2017 Michal Trojnara <Michal.Trojnara@stunnel.org>
+ *   Copyright (C) 1998-2018 Michal Trojnara <Michal.Trojnara@stunnel.org>
  *
  *   This program is free software; you can redistribute it and/or modify it
  *   under the terms of the GNU General Public License as published by the
@@ -38,6 +38,9 @@
 #include "common.h"
 #include "prototypes.h"
 
+/* Uncomment to see allocation sources in core dumps */
+/* #define DEBUG_PADDING 64 */
+
 /* reportedly, malloc does not always return 16-byte aligned addresses
  * for 64-bit targets as specified by
  * https://msdn.microsoft.com/en-us/library/6ewkz86d.aspx */
@@ -66,6 +69,9 @@ struct alloc_list_struct {
     size_t size;
     const char *alloc_file, *free_file;
     int alloc_line, free_line;
+#ifdef DEBUG_PADDING
+    char debug[DEBUG_PADDING];
+#endif
     uint64_t valid_canary, magic;
 #ifdef __GNUC__
 } __attribute__((aligned(16)));
@@ -116,7 +122,19 @@ NOEXPORT volatile uint64_t canary_initialized=CANARY_UNINTIALIZED;
 char *str_dup_debug(const char *str, const char *file, int line) {
     char *retval;
 
+    if(!str)
+        return NULL;
     retval=str_alloc_debug(strlen(str)+1, file, line);
+    strcpy(retval, str);
+    return retval;
+}
+
+char *str_dup_detached_debug(const char *str, const char *file, int line) {
+    char *retval;
+
+    if(!str)
+        return NULL;
+    retval=str_alloc_detached_debug(strlen(str)+1, file, line);
     strcpy(retval, str);
     return retval;
 }
@@ -246,7 +264,7 @@ void *str_alloc_debug(size_t size, const char *file, int line) {
     tls_data=tls_get();
     if(!tls_data) {
         tls_data=tls_alloc(NULL, NULL, "alloc");
-        s_log(LOG_ERR, "INTERNAL ERROR: Uninitialized TLS at %s, line %d",
+        s_log(LOG_CRIT, "INTERNAL ERROR: Uninitialized TLS at %s, line %d",
             file, line);
     }
 
@@ -281,6 +299,10 @@ void *str_alloc_detached_debug(size_t size, const char *file, int line) {
     alloc_list->alloc_line=line;
     alloc_list->free_file="none";
     alloc_list->free_line=0;
+#ifdef DEBUG_PADDING
+    snprintf(alloc_list->debug+1, DEBUG_PADDING-1, "ALLOC_%lu@%s:%d",
+        (unsigned long)size, file, line);
+#endif
     alloc_list->valid_canary=canary_initialized; /* before memcpy */
     memcpy((uint8_t *)(alloc_list+1)+size, canary, sizeof canary);
     alloc_list->magic=MAGIC_ALLOCATED;
@@ -332,6 +354,10 @@ NOEXPORT void *str_realloc_internal_debug(void *ptr, size_t size, const char *fi
     alloc_list->alloc_line=line;
     alloc_list->free_file="none";
     alloc_list->free_line=0;
+#ifdef DEBUG_PADDING
+    snprintf(alloc_list->debug+1, DEBUG_PADDING-1, "ALLOC_%lu@%s:%d",
+        (unsigned long)size, file, line);
+#endif
     alloc_list->valid_canary=canary_initialized; /* before memcpy */
     memcpy((uint8_t *)ptr+size, canary, sizeof canary);
     str_leak_debug(alloc_list, 1);
@@ -372,8 +398,8 @@ void str_free_debug(void *ptr, const char *file, int line) {
     alloc_list=(ALLOC_LIST *)ptr-1;
     if(alloc_list->magic==MAGIC_DEALLOCATED) { /* double free */
         /* this may (unlikely) log garbage instead of file names */
-        s_log(LOG_CRIT,
-            "Double free attempt: ptr=%p alloc=%s:%d free#1=%s:%d free#2=%s:%d",
+        s_log(LOG_CRIT, "INTERNAL ERROR: Double free attempt: "
+                "ptr=%p alloc=%s:%d free#1=%s:%d free#2=%s:%d",
             ptr,
             alloc_list->alloc_file, alloc_list->alloc_line,
             alloc_list->free_file, alloc_list->free_line,
@@ -439,7 +465,7 @@ NOEXPORT void str_leak_debug(const ALLOC_LIST *alloc_list, int change) {
         stunnel_write_unlock(&stunnel_locks[LOCK_LEAK_HASH]);
     }
 
-#ifdef PRECISE_LEAK_ALLOCATON_COUNTERS
+#if OPENSSL_VERSION_NUMBER>=0x10100000L
     /* this is *really* slow in OpenSSL < 1.1.0 */
     CRYPTO_atomic_add(&entry->num, change, &allocations,
         &stunnel_locks[LOCK_LEAK_HASH]);
