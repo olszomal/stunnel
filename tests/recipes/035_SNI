@@ -39,6 +39,7 @@ if grep -q "OpenSSL 1" "results.log"
     test_log_for "035_SNI" "execute" "$1" 2>> "stderr.log"
     exit $?
   else
-    exit_logs "035_SNI" "skipped"
+    screen_result "035_SNI" "skipped"
+    file_result "035_SNI" "error" "skipped"
     exit 125
   fi

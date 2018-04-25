@@ -28,6 +28,7 @@ if grep -q "OpenSSL 1" "results.log"
     test_log_for "015_p12_cert" "success" "$1" 2>> "stderr.log"
     exit $?
   else
-    exit_logs "015_p12_cert" "skipped"
+    screen_result "015_p12_cert" "skipped"
+    file_result "015_p12_cert" "error" "skipped"
     exit 125
   fi
