@@ -17,7 +17,7 @@ if [ -n "$(command -v ncat)" ]
   elif [ -n "$(command -v nc)" ]
     then # nc
       mynetcat="nc"
-  else
+  else # # netcat not found
     mynetcat="null"
   fi
 if [ "$mynetcat" != "null" ] # netcat is required
@@ -34,12 +34,12 @@ if [ "$mynetcat" != "null" ] # netcat is required
         /bin/sh $plik $mynetcat
         state=$?
         if [ "$state" -eq 0 ]
-          then
+          then # $state=0
             count=$((count + 1))
           elif [ "$state" -eq 125 ]
-            then
+            then # $state=125
               skip=$((skip + 1))
-          else # $state -eq 1
+          else # $state=1
             fail=$((fail + 1))
             result=1
           fi

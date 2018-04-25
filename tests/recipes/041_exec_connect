@@ -10,20 +10,19 @@ start() {
 
   [https client]
   client = yes
-  accept = 127.0.0.1:${http1}
+  exec = ${script_path}/execute
+  execArgs = execute 041_exec_connect
   connect = 127.0.0.1:${https}
-  verifyChain = yes
-  CAfile = ${script_path}/certs/CACert.pem
-  CRLfile = ${script_path}/certs/CACertCRL.pem
 
   [https server]
   accept = 127.0.0.1:${https}
-  connect = 127.0.0.1:${http2}
+  exec = ${script_path}/execute_read
+  execArgs = execute_read ${result_path}/temp.log
   cert = ${script_path}/certs/server_cert.pem
 EOT
 }
 
-check_ports "013_CRL_file"
+check_ports "041_exec_connect"
 start 2> "error.log"
-test_log_for "013_CRL_file" "success" "$1" 2>> "stderr.log"
+test_log_for "041_exec_connect" "exe_con" 2>> "stderr.log"
 exit $?

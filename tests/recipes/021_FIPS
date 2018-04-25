@@ -4,7 +4,6 @@
 start() {
   ../../src/stunnel -fd 0 <<EOT
   debug = debug
-  log = overwrite
   syslog = no
   pid = ${result_path}/stunnel.pid
   output = ${result_path}/stunnel.log
@@ -18,7 +17,7 @@ start() {
   [https server]
   accept = 127.0.0.1:${https}
   connect = 127.0.0.1:${http2}
-  cert = ${script_path}/certs/stunnel.pem
+  cert = ${script_path}/certs/server_cert.pem
 EOT
 }
 

@@ -1,0 +1,51 @@
+#!/bin/bash
+
+result=0
+count=1
+path=$(pwd)/logs
+
+for plik in logs/strace/*
+  do
+    rm $plik
+  done
+
+if [ -n "$(command -v ncat)" ]
+  then
+    if [ ! -d $path/ ]
+      then
+        mkdir $path/
+      fi
+    if [ ! -d $path/strace ]
+      then
+        mkdir $path/strace
+      fi
+    if [ -e "$path"/stderr.log ]
+     then
+        rm "$path"/stderr.log
+      fi
+    date > $path/results.log
+    ../src/stunnel -version 2>> $path/results.log
+    echo -e "\rData uploaded using stunnel:" >> $path/results.log
+    head -n5 $path/results.log
+i=1
+for plik in recipes/*
+  do
+     strace -s 100 -f $plik 2> logs/strace/"strace_$i".log
+     i=$[i + 1]
+     if [ $? -eq 1 ]
+       then
+         result=1
+       fi
+   done
+    if [ $count -eq 0 ]
+      then # no test was done
+        result=1
+      fi
+    echo "summary: success $count, skip $skip, fail $fail"
+    echo "summary: success $count, skip $skip, fail $fail" >> "$path"/results.log
+    echo "./make_test finished"
+    exit $result
+  else # ncat was not found
+    echo "./make_test error: ncat (nc) not found in \$PATH"
+    exit 125
+  fi

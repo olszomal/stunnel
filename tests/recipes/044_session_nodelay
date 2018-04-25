@@ -11,28 +11,27 @@ start() {
   [https client]
   client = yes
   failover = rr
-  accept = 127.0.0.1:${http1}
+  exec = ${script_path}/execute_read
+  execArgs = execute_read ${result_path}/temp.log
   connect = 127.0.0.1:${https}
   connect = 127.0.0.1:${https2}
-  connect = 127.0.0.1:${https3}
+  retry = yes
 
   [https server_1]
   accept = 127.0.0.1:${https}
-  connect = 127.0.0.1:${http2}
+  exec = ${script_path}/execute
+  execArgs = execute 044_session_nodelay
   cert = ${script_path}/certs/server_cert.pem
 
   [https server_2]
   accept = 127.0.0.1:${https2}
-  connect = 127.0.0.1:${http2}
-  cert = ${script_path}/certs/server_cert.pem
-
-  [https server_3]
-  accept = 127.0.0.1:${https3}
-  connect = 127.0.0.1:${http2}
+  exec = ${script_path}/execute
+  execArgs = execute 044_session_nodelay
   cert = ${script_path}/certs/server_cert.pem
 EOT
 }
 
-check_ports "039_failover_rr"
-test_log_for "039_failover_rr" "rr" "$1" 2>> "stderr.log"
+check_ports "044_session_nodelay"
+start 2> "error.log"
+test_log_for "044_session_nodelay" "session" "$1" "2" 2>> "stderr.log"
 exit $?
