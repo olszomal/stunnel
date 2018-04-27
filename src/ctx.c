@@ -1232,13 +1232,13 @@ NOEXPORT void info_callback(const SSL *ssl, int where, int ret) {
 #else
         if(state==SSL3_ST_CR_CERT_REQ_A)
 #endif
-            print_client_CA_list(SSL_get_client_CA_list(ssl));
+            print_client_CA_list(SSL_get_client_CA_list((SSL *)ssl));
 #ifndef SSL3_ST_CR_SRVR_DONE_A
         if(state==TLS_ST_CR_SRVR_DONE)
 #else
         if(state==SSL3_ST_CR_SRVR_DONE_A)
 #endif
-            if(!SSL_get_client_CA_list(ssl))
+            if(!SSL_get_client_CA_list((SSL *)ssl))
                 s_log(LOG_INFO, "Client certificate not requested");
 
         /* prevent renegotiation DoS attack */

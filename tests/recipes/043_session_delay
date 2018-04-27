@@ -25,6 +25,13 @@ EOT
 }
 
 check_ports "043_session_delay"
-start 2> "error.log"
-test_log_for "043_session_delay" "session" "$1" "1" 2>> "stderr.log"
+if ! grep -q "FORK" results.log
+  then
+    start 2> "error.log"
+    test_log_for "043_session_delay" "session" "$1" "1" 2>> "stderr.log"
+    exit $?
+  else
+    exit_logs "043_session_delay" "skipped"
+    exit 125
+  fi
 exit $?

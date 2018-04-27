@@ -212,7 +212,7 @@ void stunnel_rwlock_destroy_debug(struct CRYPTO_dynlock_value *lock,
 
 #endif /* USE_WIN32 */
 
-#if defined(USE_PTHREAD) || defined(USE_WIN32)
+#ifdef USE_OS_THREADS
 
 struct CRYPTO_dynlock_value stunnel_locks[STUNNEL_LOCKS];
 
@@ -286,7 +286,7 @@ void locking_init(void) {
 #endif
 }
 
-#endif /* defined(USE_PTHREAD) || defined(USE_WIN32) */
+#endif /* USE_OS_THREADS */
 
 /**************************************** creating a client */
 

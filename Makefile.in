@@ -14,7 +14,7 @@
 
 @SET_MAKE@
 
-# by Michal Trojnara 2015-2017
+# by Michal Trojnara 1998-2018
 
 VPATH = @srcdir@
 am__is_gnu_make = { \
@@ -196,8 +196,7 @@ am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/auto/compile \
 	$(top_srcdir)/auto/install-sh $(top_srcdir)/auto/ltmain.sh \
 	$(top_srcdir)/auto/missing AUTHORS COPYING ChangeLog INSTALL \
 	NEWS README TODO auto/compile auto/config.guess \
-	auto/config.sub auto/depcomp auto/install-sh auto/ltmain.sh \
-	auto/missing
+	auto/config.sub auto/install-sh auto/ltmain.sh auto/missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -354,7 +353,6 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -370,10 +368,6 @@ EXTRA_DIST = PORTS BUGS COPYRIGHT.GPL CREDITS INSTALL.W32 INSTALL.WCE \
 doc_DATA = INSTALL README TODO COPYING AUTHORS ChangeLog PORTS BUGS \
 	COPYRIGHT.GPL CREDITS INSTALL.W32 INSTALL.WCE INSTALL.FIPS
 distcleancheck_listfiles = find -type f -exec sh -c 'test -f $(srcdir)/{} || echo {}' ';'
-edit = sed \
-	-e 's|@bindir[@]|$(bindir)|g' \
-	-e 's|@sysconfdir[@]|$(sysconfdir)|g'
-
 all: all-recursive
 
 .SUFFIXES:
@@ -612,7 +606,7 @@ distdir: $(DISTFILES)
 	  ! -type d ! -perm -444 -exec $(install_sh) -c -m a+r {} {} \; \
 	|| chmod -R a+r "$(distdir)"
 dist-gzip: distdir
-	tardir=$(distdir) && $(am__tar) | GZIP=$(GZIP_ENV) gzip -c >$(distdir).tar.gz
+	tardir=$(distdir) && $(am__tar) | eval GZIP= gzip $(GZIP_ENV) -c >$(distdir).tar.gz
 	$(am__post_remove_distdir)
 
 dist-bzip2: distdir
@@ -638,7 +632,7 @@ dist-shar: distdir
 	@echo WARNING: "Support for shar distribution archives is" \
 	               "deprecated." >&2
 	@echo WARNING: "It will be removed altogether in Automake 2.0" >&2
-	shar $(distdir) | GZIP=$(GZIP_ENV) gzip -c >$(distdir).shar.gz
+	shar $(distdir) | eval GZIP= gzip $(GZIP_ENV) -c >$(distdir).shar.gz
 	$(am__post_remove_distdir)
 
 dist-zip: distdir
@@ -656,7 +650,7 @@ dist dist-all:
 distcheck: dist
 	case '$(DIST_ARCHIVES)' in \
 	*.tar.gz*) \
-	  GZIP=$(GZIP_ENV) gzip -dc $(distdir).tar.gz | $(am__untar) ;;\
+	  eval GZIP= gzip $(GZIP_ENV) -dc $(distdir).tar.gz | $(am__untar) ;;\
 	*.tar.bz2*) \
 	  bzip2 -dc $(distdir).tar.bz2 | $(am__untar) ;;\
 	*.tar.lz*) \
@@ -666,7 +660,7 @@ distcheck: dist
 	*.tar.Z*) \
 	  uncompress -c $(distdir).tar.Z | $(am__untar) ;;\
 	*.shar.gz*) \
-	  GZIP=$(GZIP_ENV) gzip -dc $(distdir).shar.gz | unshar ;;\
+	  eval GZIP= gzip $(GZIP_ENV) -dc $(distdir).shar.gz | unshar ;;\
 	*.zip*) \
 	  unzip $(distdir).zip ;;\
 	esac
@@ -896,11 +890,6 @@ install-data-hook:
 	@echo "*********************************************************"
 	@echo "* Type 'make cert' to also install a sample certificate *"
 	@echo "*********************************************************"
-
-stunnel.pod: Makefile
-	$(edit) '$(srcdir)/$@.in' >$@
-
-stunnel.pod: $(srcdir)/stunnel.pod
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

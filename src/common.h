@@ -468,6 +468,7 @@ extern char *sys_errlist[];
 #define USE_FIPS
 #endif
 
+#include <openssl/conf.h>
 #include <openssl/lhash.h>
 #include <openssl/ssl.h>
 #include <openssl/ui.h>

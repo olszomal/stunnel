@@ -258,7 +258,7 @@ typedef struct service_options_struct {
     int timeout_connect;                           /* maximum connect() time */
     int timeout_idle;                        /* maximum idle connection time */
     enum {FAILOVER_RR, FAILOVER_PRIO} failover;         /* failover strategy */
-    unsigned rr;               /* sequential number for round-robin failover */
+    unsigned rr;   /* per-service sequential number for round-robin failover */
     char *username;
 
         /* service-specific data for protocol.c */
@@ -385,32 +385,32 @@ typedef enum {
 typedef struct {
     jmp_buf *exception_pointer;
 
-    SSL *ssl; /* TLS connection */
+    SSL *ssl;                                              /* TLS connection */
     SERVICE_OPTIONS *opt;
     TLS_DATA *tls;
 
-    SOCKADDR_UNION peer_addr; /* peer address */
+    SOCKADDR_UNION peer_addr;                                /* peer address */
     socklen_t peer_addr_len;
-    char *accepted_address; /* textual representation of the peer address */
-    SOCKADDR_UNION *bind_addr; /* address to bind() the socket */
-    SOCKADDR_LIST connect_addr; /* either copied or resolved dynamically */
-    unsigned idx; /* actually connected address in connect_addr */
-    FD local_rfd, local_wfd; /* read and write local descriptors */
-    FD remote_fd; /* remote file descriptor */
-        /* IP for explicit local bind or transparent proxy */
-    unsigned long pid; /* PID of the local process */
-    SOCKET fd; /* temporary file descriptor */
-    RENEG_STATE reneg_state; /* used to track renegotiation attempts */
-    unsigned long long seq; /* sequential thread number for logging */
+    char *accepted_address;    /* textual representation of the peer address */
+    SOCKADDR_UNION *bind_addr;               /* address to bind() the socket */
+    SOCKADDR_LIST connect_addr;     /* either copied or resolved dynamically */
+    unsigned idx;              /* actually connected address in connect_addr */
+    FD local_rfd, local_wfd;             /* read and write local descriptors */
+    FD remote_fd;                                  /* remote file descriptor */
+    unsigned long pid;                           /* PID of the local process */
+    SOCKET fd;                                  /* temporary file descriptor */
+    RENEG_STATE reneg_state;         /* used to track renegotiation attempts */
+    unsigned long long seq;          /* sequential thread number for logging */
+    unsigned rr;    /* per-client sequential number for round-robin failover */
 
     /* data for transfer() function */
-    char sock_buff[BUFFSIZE]; /* socket read buffer */
-    char ssl_buff[BUFFSIZE]; /* TLS read buffer */
-    size_t sock_ptr, ssl_ptr; /* index of the first unused byte */
-    FD *sock_rfd, *sock_wfd; /* read and write socket descriptors */
-    FD *ssl_rfd, *ssl_wfd; /* read and write TLS descriptors */
-    uint64_t sock_bytes, ssl_bytes; /* bytes written to socket and TLS */
-    s_poll_set *fds; /* file descriptors */
+    char sock_buff[BUFFSIZE];                          /* socket read buffer */
+    char ssl_buff[BUFFSIZE];                              /* TLS read buffer */
+    size_t sock_ptr, ssl_ptr;              /* index of the first unused byte */
+    FD *sock_rfd, *sock_wfd;            /* read and write socket descriptors */
+    FD *ssl_rfd, *ssl_wfd;                 /* read and write TLS descriptors */
+    uint64_t sock_bytes, ssl_bytes;       /* bytes written to socket and TLS */
+    s_poll_set *fds;                                     /* file descriptors */
 } CLI;
 
 /**************************************** prototypes for stunnel.c */
@@ -649,6 +649,10 @@ int getnameinfo(const struct sockaddr *, socklen_t,
 /**************************************** prototypes for sthreads.c */
 
 #if defined(USE_PTHREAD) || defined(USE_WIN32)
+#define USE_OS_THREADS
+#endif
+
+#ifdef USE_OS_THREADS
 
 struct CRYPTO_dynlock_value {
 #ifdef USE_PTHREAD
@@ -665,7 +669,7 @@ struct CRYPTO_dynlock_value {
 
 typedef enum {
     LOCK_SESSION, LOCK_ADDR,
-    LOCK_CLIENTS, LOCK_SSL, LOCK_RR,        /* client.c */
+    LOCK_CLIENTS, LOCK_SSL,                 /* client.c */
     LOCK_REF,                               /* options.c */
     LOCK_INET,                              /* resolver.c */
 #ifndef USE_WIN32
@@ -699,7 +703,7 @@ void stunnel_rwlock_destroy_debug(struct CRYPTO_dynlock_value *, const char *, i
     *result = type ? CRYPTO_add(addr,amount,type) : (*addr+=amount)
 #endif
 
-#else /* defined(USE_PTHREAD) || defined(USE_WIN32) */
+#else /* USE_OS_THREADS */
 
 #define stunnel_rwlock_init(x) {}
 #define stunnel_read_lock(x) {}
@@ -708,7 +712,7 @@ void stunnel_rwlock_destroy_debug(struct CRYPTO_dynlock_value *, const char *, i
 #define stunnel_write_unlock(x) {}
 #define stunnel_rwlock_destroy(x) {}
 
-#endif /* defined(USE_PTHREAD) || defined(USE_WIN32) */
+#endif /* USE_OS_THREADS */
 
 int sthreads_init(void);
 unsigned long stunnel_process_id(void);

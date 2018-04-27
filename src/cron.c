@@ -44,7 +44,7 @@ NOEXPORT void *cron_thread(void *arg);
 #ifdef USE_WIN32
 NOEXPORT unsigned __stdcall cron_thread(void *arg);
 #endif
-#if defined(USE_PTHREAD) || defined(USE_WIN32)
+#ifdef USE_OS_THREADS
 NOEXPORT void cron_worker(void);
 NOEXPORT void cron_dh_param(void);
 #endif
@@ -113,7 +113,7 @@ NOEXPORT unsigned __stdcall cron_thread(void *arg) {
     return 0;
 }
 
-#else /* !defined(USE_PTHREAD) && !defined(USE_WIN32) */
+#else /* USE_OS_THREADS */
 
 int cron_init() {
     /* not implemented for now */
@@ -125,7 +125,7 @@ int cron_init() {
 /* run the cron job every 24 hours */
 #define CRON_PERIOD (24*60*60)
 
-#if defined(USE_PTHREAD) || defined(USE_WIN32)
+#ifdef USE_OS_THREADS
 
 NOEXPORT void cron_worker(void) {
     time_t now, then;
@@ -203,6 +203,6 @@ NOEXPORT void cron_dh_param(void) {
 }
 #endif /* OPENSSL_NO_DH */
 
-#endif /* USE_PTHREAD || USE_WIN32 */
+#endif /* USE_OS_THREADS */
 
 /* end of cron.c */

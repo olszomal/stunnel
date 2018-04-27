@@ -14,7 +14,7 @@
 
 @SET_MAKE@
 
-# by Michal Trojnara 2015-2017
+# by Michal Trojnara 1998-2018
 
 VPATH = @srcdir@
 am__is_gnu_make = { \
@@ -272,7 +272,6 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -289,7 +288,8 @@ CLEANFILES = $(man_MANS) $(doc_DATA)
 SUFFIXES = .pod.in .8.in .html.in
 edit = sed \
 	-e 's|@bindir[@]|$(bindir)|g' \
-	-e 's|@sysconfdir[@]|$(sysconfdir)|g'
+	-e 's|@sysconfdir[@]|$(sysconfdir)|g' \
+	-e '\|^<link rev="made" href="|d'
 
 all: all-am
 

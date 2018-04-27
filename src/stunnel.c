@@ -428,6 +428,7 @@ void unbind_ports(void) {
             /* create exec+connect services             */
             /* FIXME: this is just a crude workaround   */
             /*        is it better to kill the service? */
+            /* FIXME: this won't work with FORK threads */
             opt->option.retry=0;
         }
         /* purge session cache of the old SSL_CTX object */
@@ -526,8 +527,10 @@ int bind_ports(void) {
             ++listening_section;
         } else if(opt->exec_name && opt->connect_addr.names) {
             s_log(LOG_DEBUG, "Skipped exec+connect service [%s]", opt->servname);
+#ifndef OPENSSL_NO_TLSEXT
         } else if(!opt->option.client && opt->sni) {
             s_log(LOG_DEBUG, "Skipped SNI slave service [%s]", opt->servname);
+#endif
         } else { /* each service must define two endpoints */
             s_log(LOG_ERR, "Invalid service [%s]", opt->servname);
             return 1;

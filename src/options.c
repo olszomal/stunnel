@@ -2261,7 +2261,9 @@ NOEXPORT char *parse_service_option(CMD cmd, SERVICE_OPTIONS *section,
         break;
     case CMD_DUP:
         section->ssl_options_set=new_service_options.ssl_options_set;
+#if OPENSSL_VERSION_NUMBER>=0x009080dfL
         section->ssl_options_clear=new_service_options.ssl_options_clear;
+#endif /* OpenSSL 0.9.8m or later */
         break;
     case CMD_FREE:
         break;

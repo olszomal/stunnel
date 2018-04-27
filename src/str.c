@@ -438,10 +438,10 @@ NOEXPORT void str_leak_debug(const ALLOC_LIST *alloc_list, int change) {
     LEAK_ENTRY *entry;
     int new_entry, allocations;
 
-#if defined(USE_PTHREAD) || defined(USE_WIN32)
+#ifdef USE_OS_THREADS
     if(!&stunnel_locks[STUNNEL_LOCKS-1]) /* threads not initialized */
         return;
-#endif /* defined(USE_PTHREAD) || defined(USE_WIN32) */
+#endif /* USE_OS_THREADS */
     if(!number_of_sections) /* configuration file not initialized */
         return;
 
@@ -465,7 +465,7 @@ NOEXPORT void str_leak_debug(const ALLOC_LIST *alloc_list, int change) {
         stunnel_write_unlock(&stunnel_locks[LOCK_LEAK_HASH]);
     }
 
-#if OPENSSL_VERSION_NUMBER>=0x10100000L
+#if defined(USE_OS_THREADS) && OPENSSL_VERSION_NUMBER>=0x10100000L
     /* this is *really* slow in OpenSSL < 1.1.0 */
     CRYPTO_atomic_add(&entry->num, change, &allocations,
         &stunnel_locks[LOCK_LEAK_HASH]);

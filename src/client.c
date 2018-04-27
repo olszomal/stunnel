@@ -85,6 +85,7 @@ CLI *alloc_client_session(SERVICE_OPTIONS *opt, SOCKET rfd, SOCKET wfd) {
     c->local_rfd.fd=rfd;
     c->local_wfd.fd=wfd;
     c->seq=seq++;
+    c->rr=c->opt->rr++;
     return c;
 }
 
@@ -145,25 +146,30 @@ void client_main(CLI *c) {
 NOEXPORT void exec_connect_loop(CLI *c) {
     unsigned long long seq=0;
     char *fresh_id=c->tls->id;
+    unsigned retry;
 
-    while(c->opt->option.retry) { /* retry is disabled on config reload */
+    do {
         /* make sure c->tls->id is valid in str_printf() */
         char *id=str_printf("%s_%llu", fresh_id, seq++);
         str_detach(id);
         c->tls->id=id;
 
         exec_connect_once(c);
-        if(c->opt->option.retry) {
+        /* retry is asynchronously changed in the main thread,
+         * so we make sure to use the same value for both checks */
+        retry=c->opt->option.retry;
+        if(retry) {
             s_log(LOG_INFO, "Retrying an exec+connect section");
             /* c and id are detached, so it is safe to call str_stats() */
             str_stats(); /* client thread allocation tracking */
             sleep(1); /* FIXME: not a good idea in ucontext threading */
+            c->rr++;
         }
 
         /* make sure c->tls->id is valid in str_free() */
         c->tls->id=fresh_id;
         str_free(id);
-    }
+    } while(retry); /* retry is disabled on config reload */
 }
 
 /* exec+connect options specified together
@@ -1437,9 +1443,7 @@ NOEXPORT unsigned idx_cache_retrieve(CLI *c) {
     }
 
     if(c->opt->failover==FAILOVER_RR) {
-        stunnel_write_lock(&stunnel_locks[LOCK_RR]);
-        i=(c->connect_addr.start+c->opt->rr++)%c->connect_addr.num;
-        stunnel_write_unlock(&stunnel_locks[LOCK_RR]);
+        i=(c->connect_addr.start+c->rr)%c->connect_addr.num;
         s_log(LOG_INFO, "failover: round-robin, starting at entry #%d", i);
     } else {
         i=0;
