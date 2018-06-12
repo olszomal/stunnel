@@ -11,7 +11,7 @@ start() {
   [https client]
   client = yes
   accept = 127.0.0.1:${http1}
-  connect = 127.0.0.1:${https}
+  connect = 127.0.0.1:${https1}
 ;correct certificate
   cert = ${script_path}/certs/client_cert.pem
 
@@ -21,7 +21,7 @@ start() {
   connect = 127.0.0.1:${https2}
 
   [https server]
-  accept = 127.0.0.1:${https}
+  accept = 127.0.0.1:${https1}
   exec = ${script_path}/execute
   execArgs = execute 034_no_redirect_exec
   redirect = ${http2}
@@ -37,7 +37,5 @@ start() {
 EOT
 }
 
-check_ports "034_no_redirect_exec"
-start 2> "error.log"
 test_log_for "034_no_redirect_exec" "execute" "$1" 2>> "stderr.log"
 exit $?

@@ -1,9 +1,8 @@
 #!/bin/sh
 . $(dirname $0)/../test_library
 
-check_ports "040_reload"
-
-echo "
+set_config() {
+  echo "
   debug = debug
   syslog = no
   pid = ${result_path}/stunnel.pid
@@ -11,18 +10,18 @@ echo "
 
   [https client]
   client = yes
-  accept = 127.0.0.1:${http3}
-  connect = 127.0.0.1:${https}
+  accept = 127.0.0.1:${http2}
+  connect = 127.0.0.1:${https1}
 
   [https server]
-  accept = 127.0.0.1:${https}
-  connect = 127.0.0.1:${http2}
+  accept = 127.0.0.1:${https1}
+  connect = 127.0.0.1:${http_nc}
   cert = ${script_path}/certs/server_cert.pem" > "stunnel.conf"
+}
 
-../../src/stunnel stunnel.conf 2> "error.log"
-
-#  accept = 127.0.0.1:${http3} -> accept = 127.0.0.1:${http1}
-echo "
+change_config() {
+#  accept = 127.0.0.1:${http2} -> accept = 127.0.0.1:${http1}
+  echo "
   debug = debug
   syslog = no
   pid = ${result_path}/stunnel.pid
@@ -31,13 +30,21 @@ echo "
   [https client]
   client = yes
   accept = 127.0.0.1:${http1}
-  connect = 127.0.0.1:${https}
+  connect = 127.0.0.1:${https1}
 
   [https server]
-  accept = 127.0.0.1:${https}
-  connect = 127.0.0.1:${http2}
+  accept = 127.0.0.1:${https1}
+  connect = 127.0.0.1:${http_nc}
   cert = ${script_path}/certs/server_cert.pem" > "stunnel.conf"
+}
 
-reload_stunnel
+start() {
+  set_config
+  ../../src/stunnel stunnel.conf
+}
+
+check_ports "040_reload" "$1" 2>> "stderr.log"
+start_stunnel "040_reload" 2> "error.log"
+reload_stunnel "040_reload" 2>> "error.log"
 test_log_for "040_reload" "success" "$1" 2>> "stderr.log"
 exit $?

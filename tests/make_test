@@ -29,29 +29,36 @@ if [ "$mynetcat" != "null" ] # netcat is required
     ../../src/stunnel -version 2>> "results.log"
     printf "\n%s\n" "Testing..." >> "results.log"
     head -n5 "results.log"
-    for plik in ${script_path}/recipes/*
-      do
-        /bin/sh $plik $mynetcat
-        state=$?
-        if [ "$state" -eq 0 ]
-          then # $state=0
-            count=$((count + 1))
-          elif [ "$state" -eq 125 ]
-            then # $state=125
-              skip=$((skip + 1))
-          else # $state=1
-            fail=$((fail + 1))
+    if ! grep -q "solaris" "results.log"
+      then
+        for plik in ${script_path}/recipes/*
+          do
+            /bin/sh $plik $mynetcat
+            state=$?
+            if [ "$state" -eq 0 ]
+              then # $state=0
+                count=$((count + 1))
+              elif [ "$state" -eq 125 ]
+                then # $state=125
+                  skip=$((skip + 1))
+              else # $state=1
+                fail=$((fail + 1))
+                result=1
+              fi
+          done
+        if [ $count -eq 0 ]
+          then # no test was done
             result=1
           fi
-      done
-    if [ $count -eq 0 ]
-      then # no test was done
-        result=1
+        printf "%s\n" "summary: success $count, skip $skip, fail $fail"
+        printf "%s\n" "summary: success $count, skip $skip, fail $fail" >> "results.log"
+        printf "%s\n" "./make_test finished"
+        cd ..
+      else # skip make test for solaris
+        printf "%s\n" "./make_test skipped"
+        printf "%s\n" "./make_test skipped" >> "results.log"
+        #result=125
       fi
-    printf "%s\n" "summary: success $count, skip $skip, fail $fail"
-    printf "%s\n" "summary: success $count, skip $skip, fail $fail" >> "results.log"
-    printf "%s\n" "./make_test finished"
-    cd ..
   else # netcat not found
     printf "%s\n" "./make_test skipped: ncat (nc) not found in \$PATH"
     #result=125
