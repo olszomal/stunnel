@@ -64,6 +64,9 @@ struct sockaddr_un {
 };
 #endif
 
+#if !defined(USE_WIN32) && !defined(USE_OS2)
+NOEXPORT void status_info(int, int, const char *);
+#endif
 NOEXPORT int accept_connection(SERVICE_OPTIONS *, unsigned);
 NOEXPORT int exec_connect_start(void);
 NOEXPORT void unbind_port(SERVICE_OPTIONS *, unsigned);
@@ -73,9 +76,6 @@ NOEXPORT int change_root(void);
 #endif
 NOEXPORT int signal_pipe_init(void);
 NOEXPORT int signal_pipe_dispatch(void);
-#ifdef USE_FORK
-NOEXPORT void client_status(void); /* dead children detected */
-#endif
 NOEXPORT char *signal_name(int);
 
 /**************************************** global variables */
@@ -221,70 +221,48 @@ void main_cleanup() {
 
 /**************************************** Unix-specific initialization */
 
-#ifndef USE_WIN32
+#if !defined(USE_WIN32) && !defined(USE_OS2)
 
-#ifdef USE_FORK
-NOEXPORT void client_status(void) { /* dead children detected */
+void pid_status(const char *info, int nohang) {
     int pid, status;
 
-#ifdef HAVE_WAIT_FOR_PID
-    s_log(LOG_DEBUG, "Retrieving pid values with " HAVE_WAIT_FOR_PID);
-    while((pid=wait_for_pid(-1, &status, WNOHANG))>0) {
-#else
-    s_log(LOG_DEBUG, "Retrieving a pid value with wait()");
-    if((pid=wait(&status))>0) {
-#endif
-#ifdef WIFSIGNALED
-        if(WIFSIGNALED(status)) {
-            char *sig_name=signal_name(WTERMSIG(status));
-            s_log(LOG_DEBUG, "Process %d terminated on %s",
-                pid, sig_name);
-            str_free(sig_name);
-        } else {
-            s_log(LOG_DEBUG, "Process %d finished with code %d",
-                pid, WEXITSTATUS(status));
-        }
+#ifdef HAVE_WAITPID /* POSIX.1 */
+    if(nohang) {
+        s_log(LOG_DEBUG, "Retrieving pid statuses with waitpid()");
+        while((pid=waitpid(-1, &status, WNOHANG))>0)
+            status_info(pid, status, info);
+        return;
     }
-#else
-        s_log(LOG_DEBUG, "Process %d finished with code %d",
-            pid, status);
+#elif defined(HAVE_WAIT4) /* 4.3BSD */
+    if(nohang) {
+        s_log(LOG_DEBUG, "Retrieving pid statuses with wait4()");
+        while((pid=wait4(-1, &status, WNOHANG, NULL))>0)
+            status_info(pid, status, info);
+        return;
     }
 #endif
-}
-#endif /* defined USE_FORK */
-
-#ifndef USE_OS2
-
-void child_status(void) { /* dead libwrap or 'exec' process detected */
-    int pid, status;
-
-#ifdef HAVE_WAIT_FOR_PID
-    s_log(LOG_DEBUG, "Retrieving pid values with " HAVE_WAIT_FOR_PID);
-    while((pid=wait_for_pid(-1, &status, WNOHANG))>0) {
-#else
-    s_log(LOG_DEBUG, "Retrieving a pid value with wait()");
-    if((pid=wait(&status))>0) {
-#endif
-#ifdef WIFSIGNALED
-        if(WIFSIGNALED(status)) {
-            char *sig_name=signal_name(WTERMSIG(status));
-            s_log(LOG_INFO, "Child process %d terminated on %s",
-                pid, sig_name);
-            str_free(sig_name);
-        } else {
-            s_log(LOG_INFO, "Child process %d finished with code %d",
-                pid, WEXITSTATUS(status));
-        }
-#else
-        s_log(LOG_INFO, "Child process %d finished with status %d",
-            pid, status);
-#endif
-    }
+    /* WNOHANG was either not requested or it is unsupported */
+    s_log(LOG_DEBUG, "Retrieving a pid status with wait()");
+    if((pid=wait(&status))>0)
+        status_info(pid, status, info);
 }
 
-#endif /* !defined(USE_OS2) */
+NOEXPORT void status_info(int pid, int status, const char *info) {
+#ifdef WIFSIGNALED
+    if(WIFSIGNALED(status)) {
+        char *sig_name=signal_name(WTERMSIG(status));
+        s_log(LOG_INFO, "%s %d terminated on %s", info, pid, sig_name);
+        str_free(sig_name);
+    } else {
+        s_log(LOG_INFO, "%s %d finished with code %d",
+            info, pid, WEXITSTATUS(status));
+    }
+#else
+    s_log(LOG_INFO, "%s %d finished with status %d", info, pid, status);
+#endif
+}
 
-#endif /* !defined(USE_WIN32) */
+#endif /* !defined(USE_WIN32) && !defined(USE_OS2) */
 
 /**************************************** main loop accepting connections */
 
@@ -734,9 +712,9 @@ NOEXPORT int signal_pipe_dispatch(void) {
     case SIGCHLD:
         s_log(LOG_DEBUG, "Processing SIGCHLD");
 #ifdef USE_FORK
-        client_status(); /* report status of client process */
+        pid_status("Process", 1); /* client process */
 #else /* USE_UCONTEXT || USE_PTHREAD */
-        child_status();  /* report status of libwrap or 'exec' process */
+        pid_status("Child process", 1); /* 'exec' process */
 #endif /* defined USE_FORK */
         return 0;
 #endif /* !defind USE_WIN32 */

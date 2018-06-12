@@ -67,7 +67,7 @@
 .\" ========================================================================
 .\"
 .IX Title "stunnel 8"
-.TH stunnel 8 "2018.04.25" "5.45" "stunnel TLS Proxy"
+.TH stunnel 8 "2018.05.23" "5.45" "stunnel TLS Proxy"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -568,7 +568,7 @@ priority \- użyj kolejności opcji w pliku konfiguracyjnym
 .RE
 .RS 4
 .Sp
-domyślnie: rr
+domyślnie: prio
 .RE
 .IP "\fBident\fR = NAZWA_UŻYTKOWNIKA" 4
 .IX Item "ident = NAZWA_UŻYTKOWNIKA"

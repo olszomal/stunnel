@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([stunnel],[5.45])
+AC_INIT([stunnel],[5.47])
 AC_MSG_NOTICE([**************************************** initialization])
 AC_CONFIG_AUX_DIR(auto)
 AC_CONFIG_MACRO_DIR([m4])
@@ -405,6 +405,7 @@ if test -z "$sysroot" -o "x$sysroot" = "x/"; then
     sysroot=""
     AC_MSG_RESULT([/])
 else
+    SYSROOT="$sysroot"
     AC_MSG_RESULT([$sysroot])
 fi
 
@@ -415,7 +416,13 @@ check_ssl_dir() { :
 find_ssl_dir() { :
     stunnel_prefix="$prefix"
     test "x$stunnel_prefix" = "xNONE" && stunnel_prefix=$ac_default_prefix
-    for main_dir in "$stunnel_prefix" "/usr/local" "/usr/lib" "/usr/pkg" "/opt/local" "/opt" "/opt/csw" "/usr" ""; do
+    # OpenSSL directory search order:
+    # - the user-specified prefix
+    # - common locations for packages built from sources
+    # - common locations for non-OS-default package managers
+    # - common locations for OS-default package managers
+    # - empty prefix
+    for main_dir in "$stunnel_prefix" "/usr/local" "/opt" "/opt/local" "/usr/local/opt" "/opt/csw" "/usr/pkg" "/usr/lib" "/usr" ""; do
         for sub_dir in "/ssl" "/openssl" "/ossl" ""; do
             check_ssl_dir "$sysroot$main_dir$sub_dir" && return
         done

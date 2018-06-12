@@ -143,6 +143,11 @@ void client_main(CLI *c) {
     str_free(c);
 }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat"
+#pragma GCC diagnostic ignored "-Wformat-extra-args"
+#endif /* __GNUC__ */
 NOEXPORT void exec_connect_loop(CLI *c) {
     unsigned long long seq=0;
     char *fresh_id=c->tls->id;
@@ -171,6 +176,9 @@ NOEXPORT void exec_connect_loop(CLI *c) {
         str_free(id);
     } while(retry); /* retry is disabled on config reload */
 }
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif /* __GNUC__ */
 
 /* exec+connect options specified together
  * -> spawn a local program instead of stdio */
@@ -297,7 +305,7 @@ NOEXPORT void client_run(CLI *c) {
     /* display child return code if it managed to arrive on time */
     /* otherwise it will be retrieved by the init process and ignored */
     if(c->opt->exec_name) /* 'exec' specified */
-        child_status(); /* null SIGCHLD handler was used */
+        pid_status("Child process", 0); /* null SIGCHLD handler was used */
     s_log(LOG_DEBUG, "Service [%s] finished", c->opt->servname);
 #else
     stunnel_write_lock(&stunnel_locks[LOCK_CLIENTS]);
@@ -511,6 +519,7 @@ NOEXPORT void ssl_start(CLI *c) {
             case 0:
                 s_log(LOG_INFO, "ssl_start: s_poll_wait:"
                     " TIMEOUTbusy exceeded: sending reset");
+                s_poll_dump(c->fds, LOG_DEBUG);
                 throw_exception(c, 1);
             case 1:
                 break; /* OK */
@@ -649,10 +658,12 @@ NOEXPORT void transfer(CLI *c) {
                     c->ssl_ptr || c->sock_ptr) {
                 s_log(LOG_INFO, "transfer: s_poll_wait:"
                     " TIMEOUTidle exceeded: sending reset");
+                s_poll_dump(c->fds, LOG_DEBUG);
                 throw_exception(c, 1);
             } else { /* already closing connection */
                 s_log(LOG_ERR, "transfer: s_poll_wait:"
                     " TIMEOUTclose exceeded: closing");
+                s_poll_dump(c->fds, LOG_DEBUG);
                 return; /* OK */
             }
         }

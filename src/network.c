@@ -222,8 +222,8 @@ NOEXPORT void scan_waiting_queue(void) {
         for(i=0; i<context->fds->nfds; i++) {
             context->fds->ufds[i].revents=ufds[nfds].revents;
 #ifdef DEBUG_UCONTEXT
-            s_log(LOG_DEBUG, "CONTEXT %ld, FD=%d,%s%s ->%s%s%s%s%s",
-                context->id, ufds[nfds].fd,
+            s_log(LOG_DEBUG, "CONTEXT %ld, FD=%ld,%s%s ->%s%s%s%s%s",
+                context->id, (long)ufds[nfds].fd,
                 (ufds[nfds].events & POLLIN) ? " IN" : "",
                 (ufds[nfds].events & POLLOUT) ? " OUT" : "",
                 (ufds[nfds].revents & POLLIN) ? " IN" : "",
@@ -489,8 +489,8 @@ int socket_options_set(SERVICE_OPTIONS *service, SOCKET s, int type) {
     socklen_t opt_size;
     int retval=0; /* no error found */
 
-    s_log(LOG_DEBUG, "Setting %s socket options (FD=%d)",
-        type_str[type], s);
+    s_log(LOG_DEBUG, "Setting %s socket options (FD=%ld)",
+        type_str[type], (long)s);
     for(ptr=service->sock_opts; ptr->opt_str; ptr++) {
         if(!ptr->opt_val[type])
             continue; /* default */

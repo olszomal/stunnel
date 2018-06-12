@@ -1061,9 +1061,9 @@ NOEXPORT SSL_SESSION *cache_get(SSL *ssl,
         return NULL;
     val_tmp=val;
     sess=d2i_SSL_SESSION(NULL,
-#if OPENSSL_VERSION_NUMBER>=0x0090800fL
+#if OPENSSL_VERSION_NUMBER>=0x0090707fL
         (const unsigned char **)
-#endif /* OpenSSL version >= 0.8.0 */
+#endif /* OpenSSL version >= 0.9.7g */
         &val_tmp, (long)val_len);
     str_free(val);
     return sess;

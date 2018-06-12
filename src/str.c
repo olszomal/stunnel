@@ -86,7 +86,7 @@ struct alloc_list_struct {
 typedef struct {
     const char *alloc_file;
     int alloc_line;
-    int num, max;
+    long num, max;
 } LEAK_ENTRY;
 NOEXPORT LEAK_ENTRY leak_hash_table[LEAK_TABLE_SIZE],
     *leak_results[LEAK_TABLE_SIZE];
@@ -99,7 +99,7 @@ NOEXPORT LPTSTR str_vtprintf(LPCTSTR, va_list);
 NOEXPORT void *str_realloc_internal_debug(void *, size_t, const char *, int);
 
 NOEXPORT ALLOC_LIST *get_alloc_list_ptr(void *, const char *, int);
-NOEXPORT void str_leak_debug(const ALLOC_LIST *, int);
+NOEXPORT void str_leak_debug(const ALLOC_LIST *, long);
 
 NOEXPORT LEAK_ENTRY *leak_search(const ALLOC_LIST *);
 NOEXPORT void leak_report();
@@ -433,10 +433,11 @@ NOEXPORT ALLOC_LIST *get_alloc_list_ptr(void *ptr, const char *file, int line) {
 
 /**************************************** memory leak detection */
 
-NOEXPORT void str_leak_debug(const ALLOC_LIST *alloc_list, int change) {
+NOEXPORT void str_leak_debug(const ALLOC_LIST *alloc_list, long change) {
     static size_t entries=0;
     LEAK_ENTRY *entry;
-    int new_entry, allocations;
+    int new_entry;
+    long allocations;
 
 #ifdef USE_OS_THREADS
     if(!&stunnel_locks[STUNNEL_LOCKS-1]) /* threads not initialized */
@@ -465,12 +466,16 @@ NOEXPORT void str_leak_debug(const ALLOC_LIST *alloc_list, int change) {
         stunnel_write_unlock(&stunnel_locks[LOCK_LEAK_HASH]);
     }
 
-#if defined(USE_OS_THREADS) && OPENSSL_VERSION_NUMBER>=0x10100000L
-    /* this is *really* slow in OpenSSL < 1.1.0 */
+#if defined(USE_OS_THREADS) && defined(__GNUC__)
+    allocations=__sync_add_and_fetch(&entry->num, change);
+#elif defined(USE_OS_THREADS) && defined(_MSC_VER)
+    allocations=InterlockedExchangeAdd(&entry->num, change);
+#elif defined(USE_OS_THREADS) && OPENSSL_VERSION_NUMBER>=0x10100000L
+    /* CRYPTO_atomic_add() is *really* slow in OpenSSL < 1.1.0 */
     CRYPTO_atomic_add(&entry->num, change, &allocations,
         &stunnel_locks[LOCK_LEAK_HASH]);
-#else
-    allocations=(entry->num+=change); /* we just need an estimate... */
+#else /* non-atomic operations cause occasional false positives */
+    allocations=(entry->num+=change);
 #endif
 
     if(allocations<=leak_threshold()) /* leak not detected */
@@ -514,7 +519,7 @@ NOEXPORT void leak_report() {
     for(i=0; i<leak_result_num; ++i)
         if(leak_results[i] /* an officious compiler could reorder code */ &&
                 leak_results[i]->max>limit /* the limit could have changed */)
-            s_log(LOG_WARNING, "Possible memory leak at %s:%d: %d allocations",
+            s_log(LOG_WARNING, "Possible memory leak at %s:%d: %ld allocations",
                 leak_results[i]->alloc_file, leak_results[i]->alloc_line,
                 leak_results[i]->max);
 }

@@ -607,7 +607,7 @@ priority - użyj kolejności opcji w pliku konfiguracyjnym
 
 =back
 
-domyślnie: rr
+domyślnie: prio
 
 =item B<ident> = NAZWA_UŻYTKOWNIKA
 

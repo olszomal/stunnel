@@ -108,7 +108,9 @@ NOEXPORT int main_unix(int argc, char* argv[]) {
             signal(SIGINT, signal_handler); /* fatal */
 #endif
         daemon_loop();
+#if !defined(__vms) && !defined(USE_OS2)
         delete_pid();
+#endif /* standard Unix */
     } else { /* inetd mode */
         CLI *c;
 #if !defined(__vms) && !defined(USE_OS2)

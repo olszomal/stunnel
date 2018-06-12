@@ -429,7 +429,7 @@ void unbind_ports(void);
 int bind_ports(void);
 void signal_post(uint8_t);
 #if !defined(USE_WIN32) && !defined(USE_OS2)
-void child_status(void);  /* dead libwrap or 'exec' process detected */
+void pid_status(const char *, int);
 #endif
 void stunnel_info(int);
 

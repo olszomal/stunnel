@@ -252,7 +252,7 @@ static char *option_not_found=
     "Specified option name is not valid here";
 
 static char *stunnel_cipher_list=
-    "HIGH:!DH:!aNULL:!SSLv2";
+    "HIGH:!aNULL:!SSLv2:!DH:!kDHEPSK";
 
 /**************************************** parse commandline parameters */
 
@@ -1265,6 +1265,8 @@ NOEXPORT char *parse_service_option(CMD cmd, SERVICE_OPTIONS *section,
         }
         break;
     case CMD_DUP:
+        addrlist_clear(&section->local_addr, 1);
+        section->local_fd=NULL;
         name_list_dup(&section->local_addr.names,
             new_service_options.local_addr.names);
         break;
@@ -1614,6 +1616,8 @@ NOEXPORT char *parse_service_option(CMD cmd, SERVICE_OPTIONS *section,
         }
         break;
     case CMD_DUP:
+        addrlist_clear(&section->connect_addr, 0);
+        section->connect_session=NULL;
         name_list_dup(&section->connect_addr.names,
             new_service_options.connect_addr.names);
         break;
@@ -1929,7 +1933,7 @@ NOEXPORT char *parse_service_option(CMD cmd, SERVICE_OPTIONS *section,
     /* failover */
     switch(cmd) {
     case CMD_BEGIN:
-        section->failover=FAILOVER_RR;
+        section->failover=FAILOVER_PRIO;
         section->rr=0;
         break;
     case CMD_EXEC:
@@ -2607,6 +2611,7 @@ NOEXPORT char *parse_service_option(CMD cmd, SERVICE_OPTIONS *section,
         }
         break;
     case CMD_DUP:
+        addrlist_clear(&section->redirect_addr, 0);
         name_list_dup(&section->redirect_addr.names,
             new_service_options.redirect_addr.names);
         break;
@@ -3809,14 +3814,15 @@ SOCK_OPT sock_opts_def[]={
 };
 
 NOEXPORT SOCK_OPT *socket_options_init(void) {
+#ifdef USE_WIN32
+    DWORD version;
+    int major, minor;
+#endif
+
     SOCK_OPT *opt=str_alloc_detached(sizeof sock_opts_def);
     memcpy(opt, sock_opts_def, sizeof sock_opts_def);
 
 #ifdef USE_WIN32
-    DWORD version;
-    int major, minor;
-    SOCK_OPT *ptr;
-
     version=GetVersion();
     major=LOBYTE(LOWORD(version));
     minor=HIBYTE(LOWORD(version));

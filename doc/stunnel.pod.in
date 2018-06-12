@@ -595,7 +595,7 @@ priority - use the order specified in config file
 
 =back
 
-default: rr
+default: prio
 
 =item B<ident> = USERNAME
 
