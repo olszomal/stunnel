@@ -353,7 +353,12 @@ connecting_ncat() {
         then
           printf "%-35s\t%s\n" "test $1" "$2" | "$3" 127.0.0.1 "$http1" -vv 1>&2 2>> "stderr_nc.log" &
           pid_nce=$!
-          waiting_for "stunnel" "Service .* finished"
+          if [ "$2" = "shouldn't work" ]
+            then
+              waiting_for "stunnel" "Service .* finished"
+            else
+              waiting_for "temp" "test $1"
+            fi
         else # nc failed
           exit_code="netcat failed"
           result=1
@@ -370,7 +375,12 @@ connecting_ncat() {
               printf "%-35s\t%s\n" "test $1" "$2" | "$3" 127.0.0.1 "$http1" -vv  1>&2 2>> "stderr_nc.log"
             fi
           pid_nce=$!
-          waiting_for "stunnel" "Service .* finished"
+          if [ "$2" = "shouldn't work" ]
+            then
+              waiting_for "stunnel" "Service .* finished"
+            else
+              waiting_for "temp" "test $1"
+            fi
         else # ncat failed
           exit_code="netcat failed"
           result=1
