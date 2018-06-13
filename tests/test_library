@@ -297,34 +297,30 @@ check_listening() {
   result=0
   if [ -n "$(command -v netstat)" ] && PATH="${PATH}:/sbin:/usr/sbin" netstat -an > "/dev/null" 2>&1
     then
-echo netstat
       while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" netstat -an | grep "$1" | grep "LISTEN" # >> "stderr_nc.log"
         do
           printf "\n%s\n" "waiting for netcat listening on $1" # >> "stderr_nc.log"
-result=1
-          if grep -q -e "failed" -e "usage" -e "QUITTING" -e "invalid" "stderr_nc.log"
+          if grep -q -e "failed" -e "usage" -e "QUITTING" -e "invalid" -e "command not found" "stderr_nc.log"
             then
               result=1
             fi
         done
     elif [ -n "$(command -v ss)" ] && PATH="${PATH}:/sbin:/usr/sbin" ss -anl > "/dev/null" 2>&1
       then
-echo ss
         while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" ss -anl | grep "$1" >> "stderr_nc.log"
           do
             printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
-            if grep -q -e "failed" -e "usage" -e "QUITTING" -e "invalid" "stderr_nc.log"
+            if grep -q -e "failed" -e "usage" -e "QUITTING" -e "invalid" -e "command not found" "stderr_nc.log"
               then
                 result=1
               fi
           done
     elif [ -n "$(command -v lsof)" ] && PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P > "/dev/null" 2>&1
       then
-echo lsof
         while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P | grep "$1" | grep "LISTEN" >> "stderr_nc.log"
           do
             printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
-            if grep -q -e "failed" -e "usage" -e "QUITTING" -e "invalid" "stderr_nc.log"
+            if grep -q -e "failed" -e "usage" -e "QUITTING" -e "invalid" -e "command not found" "stderr_nc.log"
               then
                 result=1
               fi
@@ -368,18 +364,13 @@ connecting_ncat() {
           result=1
         fi
     else # ncat
-echo start stdbuf ncat
-      cat "nodata" | stdbuf -o0 "$3" -l -p "$http_nc" -vvv > "temp.log" & # 2>> "stderr_nc.log" &
+      if [ -n "$(command -v stdbuf)" ]
+        then
+          cat "nodata" | stdbuf -o0 "$3" -l -p "$http_nc" -vvv > "temp.log" & # 2>> "stderr_nc.log" &
+        else
+          cat "nodata" | "$3" -l -p "$http_nc" -vvv > "temp.log" & # 2>> "stderr_nc.log" &
+        fi
       pid_nc=$!
-sleep 1
-ps -aux | grep ncat
-
-echo start ncat
-      cat "nodata" | "$3" -l -p "$http_nc" -vvv > "temp.log" & # 2>> "stderr_nc.log" &
-      pid_nc=$!
-sleep 1
-ps -aux | grep ncat
-
       if check_listening "$http_nc"
         then
           if ncat --version 2>&1 | grep -q -e 'Version [0-5]\.' -e 'Version [6]\.[0-1]' -e 'Version [6]\.[2][0-4]'
@@ -412,7 +403,12 @@ sending_ncat() {
   # $2 = netcat name: "ncat" / "nc"
 
   mkfifo "nodata" 2>> "stderr_nc.log"
-  cat "nodata" | stdbuf -o0 "$2" 127.0.0.1 "$http1" -vv >"temp.log" 2>> "stderr_nc.log" &
+  if [ -n "$(command -v stdbuf)" ]
+    then
+      cat "nodata" | stdbuf -o0 "$2" 127.0.0.1 "$http1" -vv >"temp.log" 2>> "stderr_nc.log" &
+    else
+      cat "nodata" | "$2" 127.0.0.1 "$http1" -vv >"temp.log" 2>> "stderr_nc.log" &
+    fi
   pid_nce=$!
   waiting_for "temp" "test $1"
   kill -TERM ${pid_nce} 2>> "stderr_nc.log"
