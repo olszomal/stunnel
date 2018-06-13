@@ -295,8 +295,13 @@ check_listening() {
   # $1 = port number
 
   result=0
+sleep 1
+PATH="${PATH}:/sbin:/usr/sbin" netstat -an | grep "$1" | grep "LISTEN"
+PATH="${PATH}:/sbin:/usr/sbin" ss -anl | grep "$1"
+PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P | grep "$1" | grep "LISTEN"
   if [ -n "$(command -v netstat)" ] && PATH="${PATH}:/sbin:/usr/sbin" netstat -an > "/dev/null" 2>&1
     then
+echo netstat
       while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" netstat -an | grep "$1" | grep "LISTEN" >> "stderr_nc.log"
         do
           printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
@@ -307,6 +312,7 @@ check_listening() {
         done
     elif [ -n "$(command -v ss)" ] && PATH="${PATH}:/sbin:/usr/sbin" ss -anl > "/dev/null" 2>&1
       then
+echo ss
         while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" ss -anl | grep "$1" >> "stderr_nc.log"
           do
             printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
@@ -317,6 +323,7 @@ check_listening() {
           done
     elif [ -n "$(command -v lsof)" ] && PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P > "/dev/null" 2>&1
       then
+echo lsof
         while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P | grep "$1" | grep "LISTEN" >> "stderr_nc.log"
           do
             printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
