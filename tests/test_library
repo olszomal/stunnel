@@ -312,9 +312,9 @@ echo "check_listening $1 start"
   if [ -n "$(command -v lsof)" ]
     then
 echo lsof
-      while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P 2>> "stderr_nc.log" | grep "$1" | grep LISTEN >> "stderr_nc.log"
+      while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P | grep "$1" | grep LISTEN >> "stderr_nc.log"
         do
-PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P 2>> "stderr_nc.log" | grep "$1" | grep LISTEN
+PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P | grep "$1" | grep LISTEN
 printf "\n%s\n" "waiting for netcat listening on $1"
 grep -e "failed" -e "usage" -e "QUITTING" -e "invalid" "stderr_nc.log"
           printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
@@ -329,6 +329,7 @@ echo netstat
         while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" netstat -an 2>> "stderr_nc.log" | grep "$1" | grep LISTEN >> "stderr_nc.log"
           do
             printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
+result=1
             if grep -q -e "failed" -e "usage" -e "QUITTING" -e "invalid" "stderr_nc.log"
               then
                 result=1
@@ -387,9 +388,11 @@ echo "traditional nc"
           result=1
         fi
     else # ncat
+echo ncat
 ncat --version
-      cat "nodata" | stdbuf -o0 "$3" -l -p "$http_nc" -vvv > "temp.log" 2>> "stderr_nc.log" &
+      cat "nodata" | stdbuf -o0 "$3" -l -p "$http_nc" -vvv > "temp.log" &
       pid_nc=$!
+echo pin_nc
       if check_listening "$http_nc"
         then
           if ncat --version 2>&1 | grep -q -e 'Version [0-5]\.' -e 'Version [6]\.[0-1]' -e 'Version [6]\.[2][0-4]'
