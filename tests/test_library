@@ -295,16 +295,6 @@ check_listening() {
   # $1 = port number
 
   result=0
-sleep 1
-PATH="${PATH}:/sbin:/usr/sbin" netstat -an | grep "$1" | grep "LISTEN"
-PATH="${PATH}:/sbin:/usr/sbin" ss -anl | grep "$1"
-PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P | grep "$1" | grep "LISTEN"
-netstat -an
-ss -anl
-lsof -i -n -P
-netstat
-ss
-lsof
   if [ -n "$(command -v netstat)" ] && PATH="${PATH}:/sbin:/usr/sbin" netstat -an > "/dev/null" 2>&1
     then
 echo netstat
@@ -378,8 +368,18 @@ connecting_ncat() {
           result=1
         fi
     else # ncat
+echo start stdbuf ncat
       cat "nodata" | stdbuf -o0 "$3" -l -p "$http_nc" -vvv > "temp.log" & # 2>> "stderr_nc.log" &
       pid_nc=$!
+sleep 1
+ps -aux | grep ncat
+
+echo start ncat
+      cat "nodata" | "$3" -l -p "$http_nc" -vvv > "temp.log" & # 2>> "stderr_nc.log" &
+      pid_nc=$!
+sleep 1
+ps -aux | grep ncat
+
       if check_listening "$http_nc"
         then
           if ncat --version 2>&1 | grep -q -e 'Version [0-5]\.' -e 'Version [6]\.[0-1]' -e 'Version [6]\.[2][0-4]'
