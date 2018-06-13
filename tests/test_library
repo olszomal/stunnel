@@ -307,12 +307,16 @@ reload_stunnel() {
 check_listening() {
   # waiting for netcat listening on port using lsof/netstat/ss tools
   # $1 = port number
-
+echo "check_listening $1 start"
   result=0
   if [ -n "$(command -v lsof)" ]
     then
+echo lsof
       while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P 2>> "stderr_nc.log" | grep "$1" | grep LISTEN >> "stderr_nc.log"
         do
+PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P 2>> "stderr_nc.log" | grep "$1" | grep LISTEN
+printf "\n%s\n" "waiting for netcat listening on $1"
+grep -e "failed" -e "usage" -e "QUITTING" -e "invalid" "stderr_nc.log"
           printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
           if grep -q -e "failed" -e "usage" -e "QUITTING" -e "invalid" "stderr_nc.log"
             then
@@ -321,6 +325,7 @@ check_listening() {
         done
     elif [ -n "$(command -v netstat)" ]
       then
+echo netstat
         while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" netstat -an 2>> "stderr_nc.log" | grep "$1" | grep LISTEN >> "stderr_nc.log"
           do
             printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
@@ -331,6 +336,7 @@ check_listening() {
           done
     elif [ -n "$(command -v ss)" ]
       then
+echo ss
         while [ $result -eq 0 ] && ! PATH="${PATH}:/sbin:/usr/sbin" ss -anl 2>> "stderr_nc.log" | grep "$1" >> "stderr_nc.log"
           do
             printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
@@ -343,6 +349,7 @@ check_listening() {
       printf "\n%s\n" "lsof / netstat / ss not found in \$PATH" >> "stderr_nc.log"
       result=1
     fi
+echo "check_listening $1 stop"
   return $result
 }
 
@@ -350,7 +357,7 @@ connecting_ncat() {
   # $1 = test name
   # $2 = string to send
   # $3 = netcat name: "ncat" / "nc"
-
+echo "connecting_ncat $1 $2 $3 start"
   local result=0
   mkfifo "nodata" 2>> "stderr_nc.log"
   printf "\n%s\n" "test $1 - netcat connection" >> "stderr_nc.log"
@@ -358,8 +365,10 @@ connecting_ncat() {
     then # nc
       if man "$3" | grep -q  "error to use this option in conjunction"
         then # BSD nc
+echo "BSD nc"
           cat "nodata" | stdbuf -o0 "$3" -l "$http_nc" -vvv > "temp.log" 2>> "stderr_nc.log" &
         else # traditional nc
+echo "traditional nc"
           cat "nodata" | stdbuf -o0 "$3" -l -p "$http_nc" -vvv > "temp.log" 2>> "stderr_nc.log" &
         fi
       pid_nc=$!
@@ -378,6 +387,7 @@ connecting_ncat() {
           result=1
         fi
     else # ncat
+ncat --version
       cat "nodata" | stdbuf -o0 "$3" -l -p "$http_nc" -vvv > "temp.log" 2>> "stderr_nc.log" &
       pid_nc=$!
       if check_listening "$http_nc"
@@ -403,6 +413,7 @@ connecting_ncat() {
   kill -TERM ${pid_nc} ${pid_nce} 2>> "stderr_nc.log"
   echo "somedata" > "nodata" 2>> "stderr_nc.log"
   rm -f "nodata"
+echo "connecting_ncat $1 $2 $3 stop"
   return $result
 }
 
