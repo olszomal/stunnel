@@ -123,24 +123,33 @@ find_free() {
   # finding a free port using lsof/netstat/ss tools
   # $1 = test name
   # $2 = netcat name: "ncat" / "nc"
-
+echo "find_free $http_find"
   result=0
   if [ -n "$(command -v lsof)" ]
     then
+echo lsof
       while PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P 2>> "stderr_nc.log" | grep "$http_find" | grep LISTEN >> "stderr_nc.log"
         do
+PATH="${PATH}:/sbin:/usr/sbin" lsof -i -n -P 2>> "stderr_nc.log" | grep "$http_find" | grep LISTEN
+echo $http_find
           http_find=$((http_find+1))
         done
     elif [ -n "$(command -v netstat)" ]
       then
+echo netstat
         while PATH="${PATH}:/sbin:/usr/sbin" netstat -an 2>> "stderr_nc.log" | grep "$http_find" | grep LISTEN >> "stderr_nc.log"
           do
+PATH="${PATH}:/sbin:/usr/sbin" netstat -an 2>> "stderr_nc.log" | grep "$http_find" | grep LISTEN
+echo $http_find
             http_find=$((http_find+1))
           done
     elif [ -n "$(command -v ss)" ]
       then
+echo ss
         while PATH="${PATH}:/sbin:/usr/sbin" ss -anl 2>> "stderr_nc.log" | grep "$http_find" >> "stderr_nc.log"
           do
+PATH="${PATH}:/sbin:/usr/sbin" ss -anl 2>> "stderr_nc.log" | grep "$http_find" >> "stderr_nc.log"
+echo $http_find
             http_find=$((http_find+1))
           done
     else # error not handled
@@ -155,6 +164,7 @@ check_ports() {
   # $1 = test name
   # $2 = netcat name: "ncat" / "nc"
 
+echo "check_ports start"
   result=0
   printf "\n%s\n" "test $1" >> "stderr_nc.log"
   http_find=8080
@@ -177,6 +187,7 @@ check_ports() {
   https1=4433
   https2=4434
   https3=4435
+echo "check_ports stop"
   return $result
 }
 
@@ -232,6 +243,7 @@ start_stunnel() {
   # running stunnel until to bind free ports
   # $1 = test name
 
+echo "start_stunnel start"
   start 2> "error.log"
   http_bind=$http1
   bind_http_ports
@@ -248,6 +260,8 @@ start_stunnel() {
   bind_https_ports
 
   printf "\n%s %s %s %s %s %s %s\n" "test $1 ports: $http_nc $http1 $http2 $http3 $https1 $https2 $https3 $https_free" >> "stderr_nc.log"
+printf "%s %s %s %s %s %s %s\n" "test $1 ports: $http_nc $http1 $http2 $http3 $https1 $https2 $https3 $https_free"
+echo "start_stunnel stop"
   return 0
 }
 
