@@ -33,5 +33,5 @@ start() {
 EOT
 }
 
-test_log_for "039_failover_rr" "rr" "$1" 2>> "stderr.log"
+test_log_for "039_failover_rr" "rr" "0" "$1" "$2" "$3" 2>> "stderr.log"
 exit $?

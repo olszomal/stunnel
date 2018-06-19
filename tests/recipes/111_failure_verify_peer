@@ -23,5 +23,5 @@ start() {
 EOT
 }
 
-test_log_for "111_failure_verify_peer" "failure" "$1" 2>> "stderr.log"
+test_log_for "111_failure_verify_peer" "failure" "0" "$1" "$2" "$3" 2>> "stderr.log"
 exit $?

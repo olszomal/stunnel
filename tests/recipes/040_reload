@@ -43,8 +43,9 @@ start() {
   ../../src/stunnel stunnel.conf
 }
 
-check_ports "040_reload" "$1" 2>> "stderr.log"
+myglobal "$1" "$2" "$3"
+check_ports "040_reload"
 start_stunnel "040_reload" 2> "error.log"
 reload_stunnel "040_reload" 2>> "error.log"
-test_log_for "040_reload" "success" "$1" 2>> "stderr.log"
+test_log_for "040_reload" "success" "0" "$1" "$2" "$3" 2>> "stderr.log"
 exit $?

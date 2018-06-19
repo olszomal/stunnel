@@ -26,7 +26,7 @@ EOT
 
 if ! grep -q "FORK" results.log
   then
-    test_log_for "043_session_delay" "session" "$1" "1" 2>> "stderr.log"
+    test_log_for "043_session_delay" "session" "1" "$1" "$2" "$3" 2>> "stderr.log"
     exit $?
   else
     exit_logs "043_session_delay" "skipped"

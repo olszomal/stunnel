@@ -30,7 +30,7 @@ EOT
 
 if grep -q "OpenSSL 1" "results.log"
   then
-    test_log_for "036_no_SNI" "execute" "$1" 2>> "stderr.log"
+    test_log_for "036_no_SNI" "execute" "0" "$1" "$2" "$3" 2>> "stderr.log"
     exit $?
   else
     exit_logs "036_no_SNI" "skipped"

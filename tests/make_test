@@ -11,16 +11,48 @@ script_path=$(pwd)
 cd "${result_path}"
 result_path="${result_path}/logs"
 
-if [ -n "$(command -v ncat)" ]
-  then # ncat
-    mynetcat="ncat"
-  elif [ -n "$(command -v nc)" ]
-    then # nc
-      mynetcat="nc"
-  else # # netcat not found
-    mynetcat="null"
+autodetection() {
+
+  result=0
+  if [ -n "$(command -v ncat)" ]
+    then # ncat
+      mynetcat="ncat"
+    elif [ -n "$(command -v nc)" ]
+      then # nc
+        mynetcat="nc"
+    else # netcat is required
+      printf "%s\n" "ncat / nc not found in \$PATH"
+      result=1
   fi
-if [ "$mynetcat" != "null" ] # netcat is required
+
+  if [ -n "$(command -v netstat)" ] && ! netstat -a -n 2>&1 | grep -q -e "usage" -e "invalid" -e "illegal" -e "command not found"
+    then
+      mynetstat="netstat"
+    elif [ -n "$(command -v ss)" ] && ! ss -a -n -l 2>&1 | grep -q -e "usage" -e "invalid" -e "illegal" -e "command not found"
+      then
+        mynetstat="ss"
+    elif [ -n "$(command -v lsof)" ] && ! lsof -i -n -P 2>&1 | grep -q -e "usage" -e "invalid" -e "illegal" -e "command not found"
+      then
+        mynetstat="lsof"
+    else # netstat / ss / lsof is required
+      printf "%s\n" "netstat / ss / lsof not found in \$PATH or some option error"
+      result=1
+   fi
+
+  if [ -n "$(command -v stdbuf)" ]
+    then
+      mybuffer="stdbuf"
+    elif [ -n "$(command -v unbuffer)" ]
+      then
+        mybuffer="unbuffer"
+    else
+      mybuffer=""
+    fi
+
+  return $result
+}
+
+if autodetection
   then
     rm -rf "${result_path}"
     mkdir "${result_path}"
@@ -33,7 +65,7 @@ if [ "$mynetcat" != "null" ] # netcat is required
       then
         for plik in ${script_path}/recipes/*
           do
-            /bin/sh $plik $mynetcat
+            /bin/sh $plik "$mynetcat" "$mynetstat" "$mybuffer"
             state=$?
             if [ "$state" -eq 0 ]
               then # $state=0
@@ -60,7 +92,7 @@ if [ "$mynetcat" != "null" ] # netcat is required
         #result=125
       fi
   else # netcat not found
-    printf "%s\n" "./make_test skipped: ncat (nc) not found in \$PATH"
+    printf "%s\n" "./make_test skipped"
     #result=125
   fi
 exit $result

@@ -22,5 +22,5 @@ start() {
 EOT
 }
 
-test_log_for "012_verify_chain" "success" "$1" 2>> "stderr.log"
+test_log_for "012_verify_chain" "success" "0" "$1" "$2" "$3" 2>> "stderr.log"
 exit $?
