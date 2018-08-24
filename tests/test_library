@@ -153,9 +153,9 @@ check_ports() {
 }
 
 bind_http_ports(){
-
-  grep "Error binding service .*$http_bind" "error.log" >> "stderr_nc.log"
-  while [ -s "error.log" ] && grep -q "Error binding service .*$http_bind" "error.log"
+  grep "Binding service \[client.*to" "error.log" >> "stderr_nc.log"
+  grep "Binding service \[client.*failed" "error.log" >> "stderr_nc.log"
+  while [ -s "error.log" ] && grep -q "Binding service \[client.*failed" "error.log"
     do
       if [ $http_bind -eq $http1 ]
         then
@@ -171,15 +171,16 @@ bind_http_ports(){
         fi
       http_bind=$((http_bind+1))
       start 2> "error.log"
-      grep "Error binding service .*$http_bind" "error.log" >> "stderr_nc.log"
+    grep "Binding service \[client.*to" "error.log" >> "stderr_nc.log"
+    grep "Binding service \[client.*failed" "error.log" >> "stderr_nc.log"
     done
   return 0
 }
 
 bind_https_ports(){
-
-  grep "Error binding service .*$https_bind" "error.log" >> "stderr_nc.log"
-  while [ -s "error.log" ] && grep -q "Error binding service .*$https_bind" "error.log"
+  grep "Binding service \[server.*to" "error.log" >> "stderr_nc.log"
+  grep "Binding service \[server.*failed" "error.log" >> "stderr_nc.log"
+  while [ -s "error.log" ] && grep -q "Binding service \[server.*failed" "error.log"
     do
       if [ $https_bind -eq $https1 ]
         then
@@ -195,7 +196,8 @@ bind_https_ports(){
         fi
       https_bind=$((https_bind+1))
       start 2> "error.log"
-      grep "Error binding service .*$https_bind" "error.log" >> "stderr_nc.log"
+      grep "Binding service \[server.*to" "error.log" >> "stderr_nc.log"
+      grep "Binding service \[server.*failed" "error.log" >> "stderr_nc.log"
     done
   return 0
 }
@@ -247,14 +249,15 @@ reload_stunnel() {
       waiting_for "stunnel" "stunnel.pid"
       kill -HUP $(tail "stunnel.pid") 2>> "stderr_nc.log"
       waiting_for "stunnel" "127.0.0.1:$http1"
-      grep "Error binding service .*$http1" "error.log" >> "stderr_nc.log"
-      while grep -q "Error binding service .*$http1" "stunnel.log"
+      grep "Binding service \[client.*$http1" "stunnel.log" >> "stderr_nc.log"
+      grep "Binding service \[client.*failed" "stunnel.log" >> "stderr_nc.log"
+      while ! grep -q "Service \[client.*bound to.*$http1" "stunnel.log"
         do
           http1=$((http1+1))
           change_config
           kill -HUP $(tail "stunnel.pid") 2>> "stderr_nc.log"
           waiting_for "stunnel" "127.0.0.1:$http1"
-          grep "Error binding service .*$http1" "error.log" >> "stderr_nc.log"
+          grep "Binding service \[client.*$http1" "stunnel.log" >> "stderr_nc.log"
         done
       printf "\n%s\n" "test $1 - accept port: $http1" >> "stderr_nc.log"
     else
@@ -272,7 +275,7 @@ check_listening() {
   while [ $result -eq 0 ] && ! $mynetstat $opt_net | grep "$1" | grep "LISTEN" >> "stderr_nc.log"
     do
       printf "\n%s\n" "waiting for netcat listening on $1" >> "stderr_nc.log"
-      if grep -q -e "failed" -e "usage" -e "QUITTING" -e "invalid" -e "command not found" "stderr_nc.log"
+      if grep -q -e "failed:" -e "usage" -e "QUITTING" -e "invalid" -e "command not found" "stderr_nc.log"
         then
           result=1
         fi
@@ -464,7 +467,8 @@ execute_connect() {
   start_stunnel "$1"
   if [ "$1" = "042_inetd" ]
     then # inetd test
-      start_inetd > "temp.log" 2>> "error.log"
+      mkfifo "nodata" 2>> "stderr_nc.log"
+      cat "nodata" | start_inetd > "temp.log" 2>> "error.log" &
     fi
   if no_file "error.log"
     then
@@ -472,6 +476,8 @@ execute_connect() {
       if [ $1 = "042_inetd" ]
         then # inetd test
           waiting_for "stunnel_0" "Service .* finished"
+          echo "somedata" > "nodata" 2>> "stderr_nc.log"
+          rm -f "nodata"
         fi
       finding_text "yes" "test $1.*success" "temp.log" "UNUSED PATTERN"
       result=$?
@@ -534,7 +540,7 @@ loop_prio() {
         done
       cat "stunnel_0.log" > "stunnel_all.log"
       rm -f "stunnel_0.log"
-      j=1
+      local j=1
       while [ $j -lt $i ]
         do
           printf "%s\n" "*** connection $j ***" >> "stunnel_all.log"
@@ -638,6 +644,7 @@ loop_session() {
 
   local result=0
   local i=0
+  local j=0
   local max=$((2*$2))
   check_ports "$1"
   start_stunnel "$1"
@@ -655,7 +662,7 @@ loop_session() {
       finding_text "yes" "test $1.*success" "temp.log" "UNUSED PATTERN"
       result=$?
       j=$(grep -c "accepted: new session negotiated" "stunnel.log")
-      if [ $result -eq 0 ] && [ $j -ne $3 ]
+      if [ $result -eq 0 ] && [ $j -ne $2 ]
         then
           exit_code="failed"
           result=1

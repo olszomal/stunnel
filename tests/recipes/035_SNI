@@ -8,21 +8,21 @@ start() {
   pid = ${result_path}/stunnel.pid
   output = ${result_path}/stunnel.log
 
-  [https client]
+  [client]
   client = yes
   accept = 127.0.0.1:${http1}
   connect = 127.0.0.1:${https1}
   sni = sni.mydomain.com
   cert = ${script_path}/certs/client_cert.pem
 
-  [virtual]
+  [server_virtual]
   accept = 127.0.0.1:${https1}
   cert =  ${script_path}/certs/server_cert.pem
   exec = ${script_path}/execute
   execArgs = execute 035_SNI_error
 
   [sni]
-  sni = virtual:sni.mydomain.com
+  sni = server_virtual:*.mydomain.com
   cert = ${script_path}/certs/server_cert.pem
   exec = ${script_path}/execute
   execArgs = execute 035_SNI

@@ -8,7 +8,7 @@ start() {
   pid = ${result_path}/stunnel.pid
   output = ${result_path}/stunnel.log
 
-  [https client]
+  [client]
   client = yes
   exec = ${script_path}/execute_read
   execArgs = execute_read ${result_path}/temp.log
@@ -16,7 +16,7 @@ start() {
   delay = yes
   retry = yes
 
-  [https server_1]
+  [server_1]
   accept = 127.0.0.1:${https1}
   exec = ${script_path}/execute
   execArgs = execute 043_session_delay

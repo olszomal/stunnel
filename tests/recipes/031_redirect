@@ -8,7 +8,7 @@ start() {
   pid = ${result_path}/stunnel.pid
   output = ${result_path}/stunnel.log
 
-  [https client]
+  [client_1]
   client = yes
   accept = 127.0.0.1:${http1}
   connect = 127.0.0.1:${https1}
@@ -26,7 +26,7 @@ start() {
   accept = 127.0.0.1:${http3}
   connect = 127.0.0.1:${https3}
 
-  [https server]
+  [server_1]
   accept = 127.0.0.1:${https1}
   connect = 127.0.0.1:${http2}
   redirect = ${http3}

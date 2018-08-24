@@ -139,12 +139,16 @@ void client_main(CLI *c) {
     } else {
         client_run(c);
     }
+#ifndef USE_FORK
     service_free(c->opt);
+#endif
     str_free(c);
 }
 
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic push
+#endif /* __GNUC__>=4.6 */
 #pragma GCC diagnostic ignored "-Wformat"
 #pragma GCC diagnostic ignored "-Wformat-extra-args"
 #endif /* __GNUC__ */
@@ -177,7 +181,9 @@ NOEXPORT void exec_connect_loop(CLI *c) {
     } while(retry); /* retry is disabled on config reload */
 }
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif /* __GNUC__>=4.6 */
 #endif /* __GNUC__ */
 
 /* exec+connect options specified together
@@ -200,7 +206,9 @@ NOEXPORT void exec_connect_once(CLI *fresh_c) {
 }
 
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic push
+#endif /* __GNUC__>=4.6 */
 #pragma GCC diagnostic ignored "-Wformat"
 #pragma GCC diagnostic ignored "-Wformat-extra-args"
 #endif /* __GNUC__ */
@@ -208,13 +216,16 @@ NOEXPORT void client_run(CLI *c) {
     jmp_buf exception_buffer, *exception_backup;
     int err, rst;
 #ifndef USE_FORK
-    long num_clients_copy;
+    int num;
 #endif
 
 #ifndef USE_FORK
-    stunnel_write_lock(&stunnel_locks[LOCK_CLIENTS]);
-    ui_clients(++num_clients);
-    stunnel_write_unlock(&stunnel_locks[LOCK_CLIENTS]);
+#ifdef USE_OS_THREADS
+    CRYPTO_atomic_add(&num_clients, 1, &num, stunnel_locks[LOCK_CLIENTS]);
+#else
+    num=++num_clients;
+#endif
+    ui_clients(num);
 #endif
 
         /* initialize the client context */
@@ -305,15 +316,16 @@ NOEXPORT void client_run(CLI *c) {
     /* display child return code if it managed to arrive on time */
     /* otherwise it will be retrieved by the init process and ignored */
     if(c->opt->exec_name) /* 'exec' specified */
-        pid_status("Child process", 0); /* null SIGCHLD handler was used */
+        pid_status_hang("Child process"); /* null SIGCHLD handler was used */
     s_log(LOG_DEBUG, "Service [%s] finished", c->opt->servname);
 #else
-    stunnel_write_lock(&stunnel_locks[LOCK_CLIENTS]);
-    ui_clients(--num_clients);
-    num_clients_copy=num_clients; /* to move s_log() away from CRIT_CLIENTS */
-    stunnel_write_unlock(&stunnel_locks[LOCK_CLIENTS]);
-    s_log(LOG_DEBUG, "Service [%s] finished (%ld left)",
-        c->opt->servname, num_clients_copy);
+#ifdef USE_OS_THREADS
+    CRYPTO_atomic_add(&num_clients, -1, &num, stunnel_locks[LOCK_CLIENTS]);
+#else
+    num=--num_clients;
+#endif
+    ui_clients(num);
+    s_log(LOG_DEBUG, "Service [%s] finished (%ld left)", c->opt->servname, num);
 #endif
 
         /* free the client context */
@@ -324,7 +336,9 @@ NOEXPORT void client_run(CLI *c) {
     str_free(c->accepted_address);
 }
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif /* __GNUC__>=4.6 */
 #endif /* __GNUC__ */
 
 NOEXPORT void client_try(CLI *c) {
@@ -494,7 +508,7 @@ NOEXPORT void ssl_start(CLI *c) {
          * alternative solution is to disable internal session caching     *
          * NOTE: this critical section also covers callbacks (e.g. OCSP)   */
         if(unsafe_openssl)
-            stunnel_write_lock(&stunnel_locks[LOCK_SSL]);
+            CRYPTO_THREAD_write_lock(stunnel_locks[LOCK_SSL]);
 
         if(c->opt->option.client)
             i=SSL_connect(c->ssl);
@@ -502,7 +516,7 @@ NOEXPORT void ssl_start(CLI *c) {
             i=SSL_accept(c->ssl);
 
         if(unsafe_openssl)
-            stunnel_write_unlock(&stunnel_locks[LOCK_SSL]);
+            CRYPTO_THREAD_unlock(stunnel_locks[LOCK_SSL]);
 
         err=SSL_get_error(c->ssl, i);
         if(err==SSL_ERROR_NONE)
@@ -546,12 +560,14 @@ NOEXPORT void ssl_start(CLI *c) {
         throw_exception(c, 1);
     }
     print_cipher(c);
+    if(SSL_session_reused(c->ssl))
+        print_session_id(SSL_get_session(c->ssl));
 }
 
 NOEXPORT void session_cache_retrieve(CLI *c) {
     SSL_SESSION *sess;
 
-    stunnel_read_lock(&stunnel_locks[LOCK_SESSION]);
+    CRYPTO_THREAD_read_lock(stunnel_locks[LOCK_SESSION]);
     if(c->opt->option.delayed_lookup) {
         sess=c->opt->session;
     } else { /* per-destination client cache */
@@ -564,7 +580,7 @@ NOEXPORT void session_cache_retrieve(CLI *c) {
     }
     if(sess)
         SSL_set_session(c->ssl, sess);
-    stunnel_read_unlock(&stunnel_locks[LOCK_SESSION]);
+    CRYPTO_THREAD_unlock(stunnel_locks[LOCK_SESSION]);
 }
 
 NOEXPORT void print_cipher(CLI *c) { /* print negotiated cipher */
@@ -1062,10 +1078,12 @@ NOEXPORT void transfer(CLI *c) {
 }
 
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic push
+#endif /* __GNUC__>=4.6 */
 #if __GNUC__ >= 7
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
-#endif
+#endif /* __GNUC__>=7 */
 #endif /* __GNUC__ */
 
     /* returns 0 on close and 1 on non-critical errors */
@@ -1109,7 +1127,9 @@ NOEXPORT int parse_socket_error(CLI *c, const char *text) {
 }
 
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif /* __GNUC__>=4.6 */
 #endif /* __GNUC__ */
 
 NOEXPORT void auth_user(CLI *c) {
@@ -1411,11 +1431,11 @@ NOEXPORT void idx_cache_save(SSL_SESSION *sess, SOCKADDR_UNION *cur_addr) {
     s_log(LOG_INFO, "persistence: %s cached", addr_txt);
     str_free(addr_txt);
 
-    stunnel_write_lock(&stunnel_locks[LOCK_ADDR]);
+    CRYPTO_THREAD_write_lock(stunnel_locks[LOCK_ADDR]);
     old_addr=SSL_SESSION_get_ex_data(sess, index_session_connect_address);
     /* we can safely ignore the SSL_SESSION_set_ex_data() failure */
     SSL_SESSION_set_ex_data(sess, index_session_connect_address, new_addr);
-    stunnel_write_unlock(&stunnel_locks[LOCK_ADDR]);
+    CRYPTO_THREAD_unlock(stunnel_locks[LOCK_ADDR]);
     str_free(old_addr); /* NULL pointers are ignored */
 }
 
@@ -1426,13 +1446,13 @@ NOEXPORT unsigned idx_cache_retrieve(CLI *c) {
     char *addr_txt;
 
     if(c->ssl && SSL_session_reused(c->ssl)) {
-        stunnel_read_lock(&stunnel_locks[LOCK_ADDR]);
+        CRYPTO_THREAD_read_lock(stunnel_locks[LOCK_ADDR]);
         ptr=SSL_SESSION_get_ex_data(SSL_get_session(c->ssl),
             index_session_connect_address);
         if(ptr) {
             len=addr_len(ptr);
             memcpy(&addr, ptr, (size_t)len);
-            stunnel_read_unlock(&stunnel_locks[LOCK_ADDR]);
+            CRYPTO_THREAD_unlock(stunnel_locks[LOCK_ADDR]);
             /* address was copied, ptr itself is no longer valid */
             for(i=0; i<c->connect_addr.num; ++i) {
                 if(addr_len(&c->connect_addr.addr[i])==len &&
@@ -1448,7 +1468,7 @@ NOEXPORT unsigned idx_cache_retrieve(CLI *c) {
             s_log(LOG_INFO, "persistence: %s not available", addr_txt);
             str_free(addr_txt);
         } else {
-            stunnel_read_unlock(&stunnel_locks[LOCK_ADDR]);
+            CRYPTO_THREAD_unlock(stunnel_locks[LOCK_ADDR]);
             s_log(LOG_NOTICE, "persistence: No cached address found");
         }
     }

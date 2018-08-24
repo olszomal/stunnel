@@ -55,19 +55,25 @@ static LOG_MODE log_mode=LOG_MODE_BUFFER;
 
 static int syslog_opened=0;
 
-void syslog_open(void) {
-    syslog_close();
-    if(global_options.option.log_syslog)
+NOEXPORT void syslog_open(void) {
+    if(global_options.option.log_syslog) {
+        static char *servname=NULL;
+        char *servname_old;
+
+        /* openlog(3) requires a persistent copy of the "ident" parameter */
+        servname_old=servname;
+        servname=str_dup(service_options.servname);
 #ifdef __ultrix__
-        openlog(service_options.servname, 0);
+        openlog(servname, 0);
 #else
-        openlog(service_options.servname,
-            LOG_CONS|LOG_NDELAY, global_options.log_facility);
+        openlog(servname, LOG_CONS|LOG_NDELAY, global_options.log_facility);
 #endif /* __ultrix__ */
+        str_free(servname_old);
+    }
     syslog_opened=1;
 }
 
-void syslog_close(void) {
+NOEXPORT void syslog_close(void) {
     if(syslog_opened) {
         if(global_options.option.log_syslog)
             closelog();
@@ -77,7 +83,7 @@ void syslog_close(void) {
 
 #endif /* !defined(USE_WIN32) && !defined(__vms) */
 
-int log_open(void) {
+NOEXPORT int outfile_open(void) {
     if(global_options.output_file) { /* 'output' option specified */
         outfile=file_open(global_options.output_file,
             global_options.log_file_mode);
@@ -100,19 +106,36 @@ int log_open(void) {
             return 1;
         }
     }
-    log_flush(LOG_MODE_CONFIGURED);
     return 0;
 }
 
-void log_close(void) {
-    /* prevent changing the mode while logging */
-    stunnel_write_lock(&stunnel_locks[LOCK_LOG_MODE]);
-    log_mode=LOG_MODE_BUFFER;
+NOEXPORT void outfile_close(void) {
     if(outfile) {
         file_close(outfile);
         outfile=NULL;
     }
-    stunnel_write_unlock(&stunnel_locks[LOCK_LOG_MODE]);
+}
+
+int log_open(int sink) {
+#if !defined(USE_WIN32) && !defined(__vms)
+    if(sink&SINK_SYSLOG)
+        syslog_open();
+#endif
+    if(sink&SINK_OUTFILE && outfile_open())
+        return 1;
+    return 0;
+}
+
+void log_close(int sink) {
+    /* prevent changing the mode while logging */
+    CRYPTO_THREAD_write_lock(stunnel_locks[LOCK_LOG_MODE]);
+#if !defined(USE_WIN32) && !defined(__vms)
+    if(sink&SINK_SYSLOG)
+        syslog_close();
+#endif
+    if(sink&SINK_OUTFILE)
+        outfile_close();
+    CRYPTO_THREAD_unlock(stunnel_locks[LOCK_LOG_MODE]);
 }
 
 void s_log(int level, const char *format, ...) {
@@ -162,12 +185,12 @@ void s_log(int level, const char *format, ...) {
         safestring(text);
 
         /* either log or queue for logging */
-        stunnel_read_lock(&stunnel_locks[LOCK_LOG_MODE]);
+        CRYPTO_THREAD_read_lock(stunnel_locks[LOCK_LOG_MODE]);
         if(log_mode==LOG_MODE_BUFFER)
             log_queue(tls_data->opt, level, stamp, id, text);
         else
             log_raw(tls_data->opt, level, stamp, id, text);
-        stunnel_read_unlock(&stunnel_locks[LOCK_LOG_MODE]);
+        CRYPTO_THREAD_unlock(stunnel_locks[LOCK_LOG_MODE]);
     }
 
     set_last_error(libc_error);
@@ -191,32 +214,39 @@ NOEXPORT void log_queue(SERVICE_OPTIONS *opt,
     str_detach(tmp->text);
 
     /* append the new element to the list */
-    stunnel_write_lock(&stunnel_locks[LOCK_LOG_BUFFER]);
+    CRYPTO_THREAD_write_lock(stunnel_locks[LOCK_LOG_BUFFER]);
     if(tail)
         tail->next=tmp;
     else
         head=tmp;
     tail=tmp;
-    stunnel_write_unlock(&stunnel_locks[LOCK_LOG_BUFFER]);
+    if(stunnel_locks[LOCK_LOG_BUFFER])
+    CRYPTO_THREAD_unlock(stunnel_locks[LOCK_LOG_BUFFER]);
 }
 
 void log_flush(LOG_MODE new_mode) {
-    stunnel_write_lock(&stunnel_locks[LOCK_LOG_MODE]);
+    CRYPTO_THREAD_write_lock(stunnel_locks[LOCK_LOG_MODE]);
+
     /* prevent changing LOG_MODE_CONFIGURED to LOG_MODE_ERROR
      * once stderr file descriptor is closed */
-    if(log_mode!=LOG_MODE_CONFIGURED)
+    if(log_mode!=LOG_MODE_CONFIGURED || new_mode!=LOG_MODE_ERROR)
         log_mode=new_mode;
-    /* log_raw() will use the new value of log_mode */
-    stunnel_write_lock(&stunnel_locks[LOCK_LOG_BUFFER]);
-    while(head) {
-        struct LIST *tmp=head;
-        head=head->next;
-        log_raw(tmp->opt, tmp->level, tmp->stamp, tmp->id, tmp->text);
-        str_free(tmp);
+
+    /* emit the buffered logs (unless we just started buffering) */
+    if(new_mode!=LOG_MODE_BUFFER) {
+        /* log_raw() will use the new value of log_mode */
+        CRYPTO_THREAD_write_lock(stunnel_locks[LOCK_LOG_BUFFER]);
+        while(head) {
+            struct LIST *tmp=head;
+            head=head->next;
+            log_raw(tmp->opt, tmp->level, tmp->stamp, tmp->id, tmp->text);
+            str_free(tmp);
+        }
+        head=tail=NULL;
+        CRYPTO_THREAD_unlock(stunnel_locks[LOCK_LOG_BUFFER]);
     }
-    head=tail=NULL;
-    stunnel_write_unlock(&stunnel_locks[LOCK_LOG_BUFFER]);
-    stunnel_write_unlock(&stunnel_locks[LOCK_LOG_MODE]);
+
+    CRYPTO_THREAD_unlock(stunnel_locks[LOCK_LOG_MODE]);
 }
 
 NOEXPORT void log_raw(SERVICE_OPTIONS *opt,
@@ -272,7 +302,9 @@ NOEXPORT void log_raw(SERVICE_OPTIONS *opt,
 }
 
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic push
+#endif /* __GNUC__>=4.6 */
 #pragma GCC diagnostic ignored "-Wformat"
 #pragma GCC diagnostic ignored "-Wformat-extra-args"
 #endif /* __GNUC__ */
@@ -314,14 +346,18 @@ char *log_id(CLI *c) {
     return str_dup("error");
 }
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif /* __GNUC__>=4.6 */
 #endif /* __GNUC__ */
 
 /* critical problem handling */
 /* str.c functions are not safe to use here */
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
+#endif /* __GNUC__>=4.6 */
 #endif /* __GNUC__ */
 void fatal_debug(char *txt, const char *file, int line) {
     char msg[80];
@@ -372,7 +408,9 @@ void fatal_debug(char *txt, const char *file, int line) {
     abort();
 }
 #ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 #pragma GCC diagnostic pop
+#endif /* __GNUC__>=4.6 */
 #endif /* __GNUC__ */
 
 void ioerror(const char *txt) { /* input/output error */
@@ -505,6 +543,19 @@ NOEXPORT void safestring(char *c) {
     for(; *c; ++c)
         if(!(*c&0x80 || isprint((int)*c)))
             *c='.';
+}
+
+/* provide hex string corresponding to the input string
+ * will be NULL terminated */
+void bin2hexstring(const unsigned char *in_data, size_t in_size, char *out_data, size_t out_size) {
+    const char hex[16]="0123456789ABCDEF";
+    size_t i;
+
+    for(i=0; i<in_size && 2*i+2<out_size; ++i) {
+        out_data[2*i]=hex[in_data[i]>>4];
+        out_data[2*i+1]=hex[in_data[i]&0x0f];
+    }
+    out_data[2*i]='\0';
 }
 
 /* end of log.c */

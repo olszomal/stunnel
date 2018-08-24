@@ -8,13 +8,13 @@ start() {
   pid = ${result_path}/stunnel.pid
   output = ${result_path}/stunnel.log
 
-  [https client]
+  [client]
   client = yes
   exec = ${script_path}/execute
   execArgs = execute 041_exec_connect
   connect = 127.0.0.1:${https1}
 
-  [https server]
+  [server]
   accept = 127.0.0.1:${https1}
   exec = ${script_path}/execute_read
   execArgs = execute_read ${result_path}/temp.log
