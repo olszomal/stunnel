@@ -206,7 +206,7 @@
 /* #undef HAVE___MAKECONTEXT_V2 */
 
 /* Host description */
-#define HOST "x86_64-pc-linux-gnu"
+#define HOST "x86_64-unknown-linux-gnu"
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"

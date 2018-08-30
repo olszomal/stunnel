@@ -6,9 +6,13 @@ Version 5.49, unreleased, urgency: LOW
   - Logging of negotiated or resumed TLS session IDs (thx
     to ANSSI - National Cybersecurity Agency of France).
   - Reloading syslog configuration.
+  - Merged Debian 10-enabled.patch and 11-killproc.patch
+    (thx to Peter Pentchev).
 * Bugfixes
+  - Fixed a crash with OpenSSL 1.1.1.
   - Fixed syslog identifier after configuration file reload.
   - Fixed non-interactive "make check" invocations.
+  - stunnel.pem created with sha256 instead of sha1.
 
 Version 5.48, 2018.07.02, urgency: HIGH
 * Security bugfixes

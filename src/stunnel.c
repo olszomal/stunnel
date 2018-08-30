@@ -167,13 +167,13 @@ int main_configure(char *arg1, char *arg2) {
 
     /* log_open(SINK_OUTFILE) must be called after drop_privileges()
      * or logfile rotation won't be possible */
-    /* log_open(SINK_OUTFILE) must be called before daemonize()
-     * since daemonize() invalidates stderr */
     if(log_open(SINK_OUTFILE))
         return 1;
 #ifndef USE_FORK
     num_clients=0; /* the first valid config */
 #endif
+    /* log_flush(LOG_MODE_CONFIGURED) must be called before daemonize()
+     * since daemonize() invalidates stderr */
     log_flush(LOG_MODE_CONFIGURED);
     return 0;
 }
@@ -622,6 +622,7 @@ NOEXPORT int change_root(void) {
         sockerror("chdir");
         return 1;
     }
+    s_log(LOG_NOTICE, "Switched to chroot directory: %s", global_options.chroot_dir);
     return 0;
 }
 #endif /* HAVE_CHROOT */
